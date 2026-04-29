@@ -1,0 +1,19 @@
+# Python environment
+venv/
+__pycache__/
+*.pyc
+
+# Sensitive environment variables (Gemini API keys)
+.env
+
+# Database (Local SQLite files)
+*.sqlite3
+*.db
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Large CERN datasets (if you download them locally)
+*.csv
+*.json

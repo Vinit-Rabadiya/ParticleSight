@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 from app.database import init_db
 from app.services.cern_client import CERNClient
 from app.services.anomaly import AnomalyDetector
-from app.services.visualizer import VisualizerService
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,18 +27,18 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Welcome to the CERNSight API!",
-            "status":"online",
-            "system":"CERNSight"}
+            "status": "online",
+            "system": "CERNSight"}
 
 @app.get("/analyze")
 async def analyze_physics():
     """
-    triggers the physics engine to load cern data and run anomaly detection.
+    Triggers the physics engine to load CERN data and run anomaly detection.
     """
     df = CERNClient.get_data()
     if df is None:
-        return {"error":"Dataset not found in /data folder"}
-    
+        return {"error": "Dataset not found in /data folder"}
+
     anomalies = AnomalyDetector.find_outliers(df)
 
     return {
@@ -47,13 +46,3 @@ async def analyze_physics():
         "anomalies_count": len(anomalies),
         "anomalies": anomalies.to_dict(orient="records")
     }
-    
-@app.get("/histogram")
-async def get_histogram():
-    df = CERNClient.get_data()
-    if df is None:
-        return {"error":"Dataset not found in /data folder"}
-    
-    hist_data = VisualizerService.get_mass_distribution(df)
-
-    return{"bins": hist_data}

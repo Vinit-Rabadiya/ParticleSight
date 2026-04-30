@@ -17,3 +17,5 @@ Thumbs.db
 # Large CERN datasets (if you download them locally)
 *.csv
 *.json
+
+/CERN

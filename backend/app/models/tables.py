@@ -10,7 +10,7 @@ class Dataset(SQLModel, table=True):
     category: str
 
 class Analysis(SQLModel, table=True):
-    id: str = Field(default_factory= lambda: str(uuid.uuid4()), primary_key=True)
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     dataset_id: str
     findings: str
     anomaly_count: int

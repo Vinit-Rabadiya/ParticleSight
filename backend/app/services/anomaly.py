@@ -16,5 +16,7 @@ class AnomalyDetector:
 
         data_numeric['anomaly_score'] = model.fit_predict(data_numeric)
 
-        return data_numeric[data_numeric['anomaly_score'] == -1]
+        anomalies = data_numeric[data_numeric['anomaly_score'] == -1]
+
+        return anomalies.sort_values(by='M', ascending=False)
      

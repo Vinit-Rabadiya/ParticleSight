@@ -1,7 +1,11 @@
 from fastapi import FastAPI
-from app.database import init_db
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
+from app.database import init_db
+from app.services.cern_client import CERNClient
+from app.services.anomaly import AnomalyDetector
+from app.services.visualizer import VisualizerService
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -12,8 +16,44 @@ async def lifespan(app: FastAPI):
     print("Shutting down the CERNSight API...")
 
 app = FastAPI(title="CERNSight API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True,
+)
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to the CERNSight API!",
             "status":"online",
             "system":"CERNSight"}
+
+@app.get("/analyze")
+async def analyze_physics():
+    """
+    triggers the physics engine to load cern data and run anomaly detection.
+    """
+    df = CERNClient.get_data()
+    if df is None:
+        return {"error":"Dataset not found in /data folder"}
+    
+    anomalies = AnomalyDetector.find_outliers(df)
+
+    return {
+        "total_events": len(df),
+        "anomalies_count": len(anomalies),
+        "anomalies": anomalies.to_dict(orient="records")
+    }
+    
+@app.get("/histogram")
+async def get_histogram():
+    df = CERNClient.get_data()
+    if df is None:
+        return {"error":"Dataset not found in /data folder"}
+    
+    hist_data = VisualizerService.get_mass_distribution(df)
+
+    return{"bins": hist_data}

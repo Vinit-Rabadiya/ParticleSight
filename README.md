@@ -19,27 +19,21 @@ A researcher, student, or curious person can select a CERN dataset, click Analys
 
 ---
 
-## Live Demo
-
-> Coming soon — deployment in progress (Vercel + Render + Neon)
-
----
-
 ## Tech Stack
 
 ### Backend
 | Tool | Version | Purpose |
 |------|---------|---------|
 | Python | 3.13 | Core language |
-| FastAPI | 0.136+ | Async REST API framework |
-| SQLModel | 0.0.38+ | ORM combining SQLAlchemy + Pydantic |
+| FastAPI | 0.136.x | Async REST API framework |
+| SQLModel | 0.0.38 | ORM combining SQLAlchemy + Pydantic |
 | PostgreSQL | 16 | Primary database |
-| httpx | 0.28+ | Async HTTP client for CERN data fetching |
+| httpx | 0.28.x | Async HTTP client for CERN data fetching |
 | pandas | 2.x | Data loading and manipulation |
 | numpy | 2.x | Numerical operations |
-| scipy | 1.17+ | Statistical tests (Spearman correlation, skewness) |
-| scikit-learn | 1.8+ | Isolation Forest anomaly detection |
-| google-generativeai | 0.8+ | Gemini API for plain-English AI insights |
+| scipy | 1.17.x | Statistical tests |
+| scikit-learn | 1.8.x | Isolation Forest anomaly detection |
+| google-generativeai | 0.8.x | Gemini API for plain-English AI insights |
 
 ### Frontend *(in progress)*
 | Tool | Version | Purpose |
@@ -95,18 +89,6 @@ React frontend renders:
 
 ---
 
-## Datasets
-
-| Dataset | Source | Size | Use |
-|---------|--------|------|-----|
-| CMS Dimuon Events (Run2010B) | [opendata.cern.ch/record/700](https://opendata.cern.ch/record/700) | 100k events, 20 columns | Primary development dataset |
-| CMS Run 2011A Multi-Lepton | [opendata.cern.ch/record/545](https://opendata.cern.ch/record/545) | 50k+ events | Multi-dataset validation |
-| ATLAS Higgs Boson ML Challenge | [kaggle.com/c/higgs-boson](https://www.kaggle.com/c/higgs-boson/data) | 250k events, 33 columns | Supervised ML evaluation |
-
-The dimuon dataset contains two muon particles per collision event — their energy, momentum, charge, and calculated invariant mass. The invariant mass column (M) shows a peak around 91 GeV — the Z boson — which serves as a built-in validation that the analysis is working correctly.
-
----
-
 ## ML Approach
 
 ### Anomaly Detection — Isolation Forest (Unsupervised)
@@ -116,31 +98,11 @@ No labels needed. The model learns what "normal" collision events look like, the
 - Features: energy, momentum components, invariant mass
 - Normalisation: StandardScaler before fitting
 - Contamination: 3% (tunable)
-- Evaluation: Qualitative on dimuon data (no labels), ROC AUC on Higgs dataset (has labels)
-
-### Correlation Discovery — Spearman Rank Correlation
-
-Spearman is used instead of Pearson because physics data is rarely normally distributed. Every pair of numeric columns is tested, p-values are computed, and only statistically significant correlations (p < 0.05) are returned.
+- Evaluation: Qualitative on dimuon data, ROC AUC on Higgs dataset (has labels)
 
 ### Distribution Profiling
 
 For every numeric column: mean, median, standard deviation, skewness, kurtosis, histogram data. Columns with skewness > 2.0 are flagged as unusual and highlighted to the AI.
-
----
-
-## API Endpoints
-
-```
-GET  /                           → Health check
-GET  /api/datasets/              → List all datasets
-GET  /api/datasets/{id}/         → Get one dataset's metadata
-POST /api/analysis/              → Start new analysis
-GET  /api/analysis/{id}/         → Get analysis status
-GET  /api/analysis/{id}/results/ → Get full results
-GET  /api/insights/{analysis_id} → Get AI plain-English insights
-```
-
-Interactive API docs available at `/docs` when running locally.
 
 ---
 
@@ -166,7 +128,6 @@ cernsight/
 │   │   │   ├── analyser.py      # Master pipeline
 │   │   │   └── llm.py           # Gemini AI insights
 │   │   └── data/                # Downloaded CERN CSV files
-│   └── requirements.txt
 ├── frontend/                    # React app (in progress)
 ├── docker-compose.yml           # Local PostgreSQL container
 └── README.md
@@ -193,25 +154,13 @@ python -m venv venv
 venv\Scripts\activate        # Windows
 source venv/bin/activate     # Mac/Linux
 
-# 3. Install dependencies
-pip install -r requirements.txt
+# 3. Create .env file (see Environment Variables below)
 
-# 4. Create .env file
-# Add DATABASE_URL and GEMINI_API_KEY (see Environment Variables below)
-
-# 5. Start the API
+# 4. Start the API
 uvicorn app.main:app --reload
 ```
 
 Visit [http://localhost:8000/docs](http://localhost:8000/docs) for interactive API documentation.
-
-### Frontend *(coming soon)*
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
 
 ---
 
@@ -262,11 +211,3 @@ Total hosting cost: **$0**
 Built by a 4th year Computer Science student as an open-source data accessibility platform for CERN's publicly released collision datasets.
 
 This is not a physics analysis tool — it is a **data platform** designed to make scientific datasets explorable by anyone, regardless of their physics background.
-
----
-
-## Contact & Links
-
-- CERN Open Data Portal: [opendata.cern.ch](https://opendata.cern.ch)
-- CERN Open Data Forum: [opendata-forum.cern.ch](https://opendata-forum.cern.ch)
-- Gemini API: [aistudio.google.com](https://aistudio.google.com)

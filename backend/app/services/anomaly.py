@@ -1,21 +1,57 @@
-import pandas as pd
+import numpy as np
 from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
 
-class AnomalyDetector:
-    @staticmethod
-    def find_outliers(df: pd.DataFrame, contamination: float = 0.01):
-        """
-        Uses Isolation Forest to find the 1% most 'unusual' events.
-        """
-        df.columns = df.columns.str.strip()  # Remove any leading/trailing whitespace from column names
-        features = ['E1', 'px1', 'py1', 'pz1', 'E2', 'px2', 'py2', 'pz2', 'M']
 
-        data_numeric = df[features].apply(pd.to_numeric, errors='coerce').dropna()
+def _find_anomaly_features(num_cols, anomaly_indices):
+    features = []
+    normal_indices = np.setdiff1d(np.arange(len(num_cols)), anomaly_indices)
 
-        model = IsolationForest(contamination=contamination, random_state=42)
+    for col in num_cols.columns:
+        normal_mean = num_cols.iloc[normal_indices][col].mean()
+        anomaly_mean = num_cols.iloc[anomaly_indices][col].mean()
+        mean_diff = abs(anomaly_mean - normal_mean)
+        features.append({
+            "feature": col,
+            "anomaly_mean": round(float(anomaly_mean), 4),
+            "normal_mean": round(float(normal_mean), 4),
+            "difference": round(float(mean_diff), 4)
+        })
+    features.sort(key=lambda x: x["difference"], reverse=True)  # Sort by mean difference  
+    return features[:5]  # Return top 5 features with the largest mean difference
 
-        data_numeric['anomaly_score'] = model.fit_predict(data_numeric)
+def detect_anomalies(df):
+    # Get only numeric columns and drop rows with missing values
+    num_cols = df.select_dtypes(include=[np.number]).dropna()
 
-        anomalies = data_numeric[data_numeric['anomaly_score'] == -1]
+    if num_cols.empty:
+        return []  # No numeric data to analyze
 
-        return anomalies.sort_values(by='M', ascending=False)
+    #standardizing the data to have mean=0 and std=1
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(num_cols)
+
+    #fit the Isolation Forest model
+    model = IsolationForest(n_estimators=100, contamination=0.03, random_state=42)
+    model.fit(scaled_data)
+
+    # predict anomalies -1 for anomaly, 1 for normal
+    predictions = model.predict(scaled_data)
+
+    anomaly_scores = model.decision_function(scaled_data)  # can be used to get anomaly scores if needed 
+
+    #getting the indices of the anomalies
+    anomaly_indices = np.where(predictions == -1)[0]
+
+    dictionary = {
+        "anomaly_indices": anomaly_indices[:50].tolist(),
+        "anomaly_scores": anomaly_scores.tolist(),
+        "total_events": len(df),
+        "total_anomalies": len(anomaly_indices),
+        "anomaly_percentage": round((len(anomaly_indices) / len(df)) * 100, 2),
+
+
+    }
+    most_anomalous_features = _find_anomaly_features(num_cols, anomaly_indices)
+    dictionary["most_anomalous_features"] = most_anomalous_features
+    return dictionary

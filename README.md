@@ -6,9 +6,7 @@
 
 ## ⚠️ Disclaimer
 
-ParticleSight is an independent, open-source project and is **not affiliated with, endorsed by, or sponsored by CERN**. All data is sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) in accordance with their [Open Data Policy](https://opendata.cern.ch/docs/about). "CERN" and the CERN logo are trademarks of CERN. This project is an independent tool and is not affiliated with or endorsed by CERN. References to "CERN" within the source code (e.g., file names, class names or function names) are used strictly for descriptive purposes to identify the data source.
-
-> **Note:** This is an independent personal project and is not affiliated with or endorsed by CERN.
+ParticleSight is an independent, personal project and is **not affiliated with, endorsed by, or sponsored by CERN**. All data is sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) in accordance with their [Open Data Policy](https://opendata.cern.ch/docs/about). "CERN" and the CERN logo are trademarks of CERN. References to "CERN" within the source code (e.g., file names, class names, or function names) are used strictly for descriptive purposes to identify the data source.
 
 ---
 
@@ -24,7 +22,7 @@ This is not a physics analysis tool — it is a **data platform** designed to ma
 
 ParticleSight is a full-stack web platform that takes real particle collision data from the CERN Open Data Portal and automatically discovers hidden patterns, correlations, and anomalies — then explains every finding in plain English using AI.
 
-A researcher, student, or curious person can select a CERN dataset, click Analyse, and within seconds see:
+A researcher, student, or curious person can select a CERN dataset, click Analyse, and see:
 
 - Statistical profiles of every data column
 - The strongest correlations between physics variables
@@ -37,24 +35,24 @@ A researcher, student, or curious person can select a CERN dataset, click Analys
 
 ## Tech Stack
 
-> **Note:** This stack reflects the current state of the project and may evolve as development progresses.
+> **Note:** This stack reflects the current state of the project and will evolve as development progresses.
 
 ### Backend
 
-| Tool                | Version | Purpose                                  |
-| ------------------- | ------- | ---------------------------------------- |
-| Python              | 3.13    | Core language                            |
-| FastAPI             | 0.136.x | Async REST API framework                 |
-| SQLModel            | 0.0.38  | ORM combining SQLAlchemy + Pydantic      |
-| PostgreSQL          | 16      | Primary database                         |
-| httpx               | 0.28.x  | Async HTTP client for CERN data fetching |
-| pandas              | 2.x     | Data loading and manipulation            |
-| numpy               | 2.x     | Numerical operations                     |
-| scipy               | 1.17.x  | Statistical tests                        |
-| scikit-learn        | 1.8.x   | Isolation Forest anomaly detection       |
-| google-generativeai | 0.8.x   | Gemini API for plain-English AI insights |
+| Tool                | Version  | Purpose                                    |
+| ------------------- | -------- | ------------------------------------------ |
+| Python              | 3.13     | Core language                              |
+| FastAPI             | 0.136.x  | Async REST API framework                   |
+| SQLModel            | 0.0.38   | ORM combining SQLAlchemy + Pydantic        |
+| SQLite              | built-in | Database (local development)               |
+| requests            | 2.x      | HTTP client for downloading CERN CSV files |
+| pandas              | 2.x      | Data loading and manipulation              |
+| numpy               | 2.x      | Numerical operations                       |
+| scipy               | 1.17.x   | Statistical tests (planned)                |
+| scikit-learn        | 1.8.x    | Isolation Forest anomaly detection         |
+| google-generativeai | 0.8.x    | Gemini API for plain-English AI insights (planned) |
 
-### Frontend _(in progress)_
+### Frontend _(not started)_
 
 | Tool           | Version | Purpose                   |
 | -------------- | ------- | ------------------------- |
@@ -73,34 +71,35 @@ A researcher, student, or curious person can select a CERN dataset, click Analys
 User selects a CERN dataset
         ↓
 Backend downloads CSV from CERN Open Data Portal
+(uses requests — checks local cache first, downloads if not found)
         ↓
 pandas loads it into a DataFrame
         ↓
 ┌─────────────────────────────────────┐
 │         ANALYSIS PIPELINE           │
 │                                     │
-│  1. profiler.py                     │
+│  1. profiler.py  [in progress]      │
 │     → Stats for every column        │
 │     → Flags unusual distributions   │
 │                                     │
-│  2. correlation.py                  │
+│  2. correlation.py  [in progress]   │
 │     → Spearman r for all pairs      │
 │     → p-value significance test     │
 │     → Ranks by strength             │
 │                                     │
-│  3. anomaly.py                      │
-│     → StandardScaler normalisation  │
+│  3. anomaly.py  [complete]          │
 │     → Isolation Forest detection    │
 │     → Scores every event            │
+│     → Returns top anomalous events  │
 └─────────────────────────────────────┘
         ↓
-Results sent to Gemini API
+Results sent to Gemini API  [planned]
         ↓
 Gemini returns 5 plain-English insights as JSON
         ↓
-Everything saved to PostgreSQL
+Everything saved to SQLite database
         ↓
-React frontend renders:
+React frontend renders:  [not started]
   - Distribution histograms
   - Correlation heatmap
   - Anomaly scatter plot
@@ -109,22 +108,38 @@ React frontend renders:
 
 ---
 
+## CERN APIs Used
+
+ParticleSight uses two endpoints from the CERN Open Data Portal:
+
+| Purpose | URL |
+|---------|-----|
+| Download dataset CSV | `https://opendata.cern.ch/record/{id}/files/{filename}.csv` |
+| Fetch dataset metadata (DOI, title, experiment, year) | `https://opendata.cern.ch/api/records/{id}` |
+
+All analysis (profiling, correlation, anomaly detection, AI insights) runs locally on the backend. No data is sent back to CERN.
+
+---
+
 ## ML Approach
 
-> **Note:** The approaches described below reflect the current plan and may change as the project evolves.
+> **Note:** The approaches described below reflect the current plan. Items marked [planned] are not yet implemented.
 
-### Anomaly Detection — Isolation Forest (Unsupervised)
+### Anomaly Detection — Isolation Forest (complete)
 
 No labels needed. The model learns what "normal" collision events look like, then flags anything that deviates significantly.
 
-- Features: energy, momentum components, invariant mass
-- Normalisation: StandardScaler before fitting
-- Contamination: 3% (tunable)
-- Evaluation: Qualitative on dimuon data, ROC AUC on Higgs dataset (has labels)
+- Features used: `E1, px1, py1, pz1, E2, px2, py2, pz2, M`
+- Contamination: 1% (flags the 1% most unusual events)
+- Results sorted by invariant mass `M`
 
-### Distribution Profiling
+### Distribution Profiling [in progress]
 
-For every numeric column: mean, median, standard deviation, skewness, kurtosis, histogram data. Columns with skewness > 2.0 are flagged as unusual and highlighted to the AI.
+For every numeric column: mean, median, standard deviation, skewness, kurtosis, histogram data. Columns with skewness > 2.0 will be flagged as unusual and highlighted to the AI.
+
+### Correlation Discovery [in progress]
+
+Spearman correlation across all numeric column pairs, with p-value significance testing. Returns the top 10 strongest statistically significant correlations.
 
 ---
 
@@ -134,24 +149,21 @@ For every numeric column: mean, median, standard deviation, skewness, kurtosis, 
 particlesight/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI entry point, CORS, routers
-│   │   ├── database.py          # PostgreSQL connection setup
+│   │   ├── main.py              # FastAPI entry point + CORS
+│   │   ├── database.py          # SQLite connection setup
 │   │   ├── models/
-│   │   │   └── tables.py        # Dataset, Analysis, AnalysisResult tables
-│   │   ├── routers/
-│   │   │   ├── datasets.py      # Dataset listing endpoints
-│   │   │   ├── analysis.py      # Trigger + status endpoints
-│   │   │   └── insights.py      # AI insights endpoints
+│   │   │   └── tables.py        # Dataset, Analysis tables
+│   │   ├── routers/             # API routers (in progress)
 │   │   ├── services/
-│   │   │   ├── cern_client.py   # Fetch data from CERN portal
-│   │   │   ├── profiler.py      # Distribution profiling
-│   │   │   ├── correlation.py   # Spearman correlation discovery
+│   │   │   ├── cern_client.py   # Download CSV + fetch metadata from CERN
+│   │   │   ├── profiler.py      # Distribution profiling (in progress)
+│   │   │   ├── correlation.py   # Spearman correlation (in progress)
 │   │   │   ├── anomaly.py       # Isolation Forest anomaly detection
-│   │   │   ├── analyser.py      # Master pipeline
-│   │   │   └── llm.py           # Gemini AI insights
+│   │   │   ├── analyser.py      # Master pipeline (planned)
+│   │   │   └── llm.py           # Gemini AI insights (planned)
 │   │   └── data/                # Downloaded CERN CSV files (not committed)
-├── frontend/                    # React app (in progress)
-├── docker-compose.yml           # Local PostgreSQL container
+├── frontend/                    # React app (not started)
+├── docker-compose.yml           # PostgreSQL container (for future use)
 └── README.md
 ```
 
@@ -162,20 +174,19 @@ particlesight/
 ### Prerequisites
 
 - Python 3.13+
-- Docker Desktop (for local PostgreSQL)
-- Node.js 20+ (for frontend)
+- Node.js 20+ (for frontend, when ready)
 
 ### Backend
 
 ```bash
-# 1. Start PostgreSQL
-docker compose up -d
-
-# 2. Create and activate virtual environment
+# 1. Create and activate virtual environment
 cd backend
 python -m venv venv
 venv\Scripts\activate        # Windows
 source venv/bin/activate     # Mac/Linux
+
+# 2. Install dependencies
+pip install -r requirements.txt
 
 # 3. Create .env file (see Environment Variables below)
 
@@ -203,7 +214,7 @@ Get a free Gemini API key at [https://aistudio.google.com](https://aistudio.goog
 
 ---
 
-## Deployment
+## Deployment _(planned)_
 
 | Service  | Platform                | Cost |
 | -------- | ----------------------- | ---- |
@@ -219,13 +230,14 @@ Total hosting cost: **$0**
 
 | Component                            | Status         |
 | ------------------------------------ | -------------- |
-| CERN data fetching                   | ✅ Complete    |
+| CERN data fetching (CSV download)    | ✅ Complete    |
+| CERN metadata fetching (DOI, title)  | ✅ Complete    |
 | Anomaly detection (Isolation Forest) | ✅ Complete    |
 | Distribution profiling               | 🔄 In progress |
 | Correlation discovery                | 🔄 In progress |
-| Gemini AI insights                   | 🔄 In progress |
-| FastAPI routers                      | 🔄 In progress |
-| PostgreSQL integration               | 🔄 In progress |
+| Gemini AI insights                   | ⬜ Not started |
+| FastAPI routers                      | ⬜ Not started |
+| Master analysis pipeline             | ⬜ Not started |
 | React frontend                       | ⬜ Not started |
 | Deployment                           | ⬜ Not started |
 
@@ -235,23 +247,21 @@ Total hosting cost: **$0**
 
 All datasets used by ParticleSight are sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) and are released under the [Creative Commons CC0 1.0 Universal (CC0 1.0) Public Domain Dedication](https://creativecommons.org/publicdomain/zero/1.0/), which permits free use, modification, and distribution.
 
-CERN recommends citing datasets by their DOI to ensure reproducibility. The datasets used in this project are:
+Datasets used in this project:
 
-**CMS Collaboration (2014). Dimuon events with invariant mass between 2 and 110 GeV, Run2010B.**
-CERN Open Data Portal.
-DOI: [https://doi.org/10.7483/OPENDATA.CMS.A987.B2V2](https://doi.org/10.7483/OPENDATA.CMS.A987.B2V2)
-Record: [opendata.cern.ch/record/700](https://opendata.cern.ch/record/700)
+| Dataset | Record |
+|---------|--------|
+| CMS Dimuon Events Run2010B | [opendata.cern.ch/record/700](https://opendata.cern.ch/record/700) |
+| CMS Run 2011A Multi-Lepton | [opendata.cern.ch/record/545](https://opendata.cern.ch/record/545) |
 
-**CMS Collaboration (2016). Run2011A Multi-Lepton derived dataset.**
-CERN Open Data Portal.
-Record: [opendata.cern.ch/record/545](https://opendata.cern.ch/record/545)
-
-> DOIs are stored in the ParticleSight database and displayed alongside every analysis result in the UI, so users always know exactly which dataset they are looking at.
+DOIs are fetched automatically from the CERN API and stored in the database alongside each dataset.
 
 ---
 
 ## License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+© 2026 ParticleSight. All rights reserved.
+
+This project is currently unlicensed. No permission is granted to copy, modify, distribute, or use this code without explicit written permission from the author.
 
 CERN Open Data used by this project is released under the [Creative Commons CC0 1.0 Universal (CC0 1.0) Public Domain Dedication](https://creativecommons.org/publicdomain/zero/1.0/).

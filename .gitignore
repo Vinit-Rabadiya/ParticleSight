@@ -33,3 +33,6 @@ dist/
 
 # Blueprint / reference docs (not part of the app)
 /CERN
+
+# Project hooks — local dev tooling, not part of the app
+.particlesight/

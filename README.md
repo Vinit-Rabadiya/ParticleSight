@@ -233,13 +233,20 @@ Total hosting cost: **$0**
 
 ## Data Sources
 
-All datasets used by ParticleSight are sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) and are released under the [Creative Commons CC0](https://creativecommons.org/publicdomain/zero/1.0/) waiver, which permits free use, modification, and distribution.
+All datasets used by ParticleSight are sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) and are released under the [Creative Commons CC0 1.0 Universal (CC0 1.0) Public Domain Dedication](https://creativecommons.org/publicdomain/zero/1.0/), which permits free use, modification, and distribution.
 
-| Dataset | Record |
-|---------|--------|
-| CMS Dimuon Events Run2010B | [opendata.cern.ch/record/700](https://opendata.cern.ch/record/700) |
-| CMS Run 2011A Multi-Lepton | [opendata.cern.ch/record/545](https://opendata.cern.ch/record/545) |
+CERN recommends citing datasets by their DOI to ensure reproducibility. The datasets used in this project are:
 
+**CMS Collaboration (2014). Dimuon events with invariant mass between 2 and 110 GeV, Run2010B.**
+CERN Open Data Portal.
+DOI: [https://doi.org/10.7483/OPENDATA.CMS.A987.B2V2](https://doi.org/10.7483/OPENDATA.CMS.A987.B2V2)
+Record: [opendata.cern.ch/record/700](https://opendata.cern.ch/record/700)
+
+**CMS Collaboration (2016). Run2011A Multi-Lepton derived dataset.**
+CERN Open Data Portal.
+Record: [opendata.cern.ch/record/545](https://opendata.cern.ch/record/545)
+
+> DOIs are stored in the ParticleSight database and displayed alongside every analysis result in the UI, so users always know exactly which dataset they are looking at.
 
 ---
 

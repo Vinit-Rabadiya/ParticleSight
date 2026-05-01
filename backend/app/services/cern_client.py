@@ -20,7 +20,7 @@ class CERNClient:
         try:
             print(f"Downloading from CERN: {url}")
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
             response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
@@ -37,3 +37,57 @@ class CERNClient:
             print("\nTIP: If the download fails, open the link in your browser,")
             print(f"   save the file as '{filename}' in D:\\particlesight\\backend\\")
             return None
+
+    @staticmethod
+    def fetch_dataset_metadata(record_id: str) -> dict:
+        """
+        Fetches metadata for a CERN Open Data record by its ID.
+        Automatically extracts the DOI, title, experiment, and year.
+
+        Uses the CERN Open Data REST API:
+        GET https://opendata.cern.ch/api/records/{record_id}
+
+        Returns a dict with keys: title, doi, doi_url, experiment, year, description
+        Returns an empty dict if the request fails.
+        """
+        url = f"https://opendata.cern.ch/api/records/{record_id}"
+        headers = {
+            "User-Agent": "ParticleSight/1.0 (independent open-source project; not affiliated with CERN)"
+        }
+
+        try:
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+
+            metadata = data.get("metadata", {})
+
+            # Extract DOI — stored under "doi" in the metadata
+            doi = metadata.get("doi", None)
+            doi_url = f"https://doi.org/{doi}" if doi else None
+
+            # Extract experiment name from the "experiment" list
+            experiments = metadata.get("experiment", [])
+            experiment = experiments[0] if experiments else None
+
+            # Extract year from "date_published"
+            date_published = metadata.get("date_published", None)
+            year = int(date_published[:4]) if date_published else None
+
+            # Extract description
+            description = metadata.get("description", None)
+
+            print(f"Fetched metadata for record {record_id}: DOI={doi}")
+
+            return {
+                "title": metadata.get("title", f"CERN Dataset {record_id}"),
+                "doi": doi,
+                "doi_url": doi_url,
+                "experiment": experiment,
+                "year": year,
+                "description": description,
+            }
+
+        except Exception as e:
+            print(f"Could not fetch metadata for record {record_id}: {e}")
+            return {}

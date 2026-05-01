@@ -6,7 +6,7 @@
 
 ## ⚠️ Disclaimer
 
-ParticleSight is an independent, open-source project and is **not affiliated with, endorsed by, or sponsored by CERN**. All data is sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) in accordance with their [Open Data Policy](https://opendata.cern.ch/docs/about). The CERN name and logo are trademarks of CERN and are not used in this project.
+ParticleSight is an independent, open-source project and is **not affiliated with, endorsed by, or sponsored by CERN**. All data is sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) in accordance with their [Open Data Policy](https://opendata.cern.ch/docs/about). "CERN" and the CERN logo are trademarks of CERN. This project is an independent tool and is not affiliated with or endorsed by CERN. References to "CERN" within the source code (e.g., file names, class names or function names) are used strictly for descriptive purposes to identify the data source.
 
 > **Note:** This is an independent personal project and is not affiliated with or endorsed by CERN.
 

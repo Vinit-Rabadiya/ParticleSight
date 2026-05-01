@@ -44,7 +44,7 @@ A researcher, student, or curious person can select a CERN dataset, click Analys
 | Python              | 3.13     | Core language                              |
 | FastAPI             | 0.136.x  | Async REST API framework                   |
 | SQLModel            | 0.0.38   | ORM combining SQLAlchemy + Pydantic        |
-| SQLite              | built-in | Database (local development)               |
+| PostgreSQL          | 18.3     | Primary database (runs via Docker)         |
 | requests            | 2.x      | HTTP client for downloading CERN CSV files |
 | pandas              | 2.x      | Data loading and manipulation              |
 | numpy               | 2.x      | Numerical operations                       |
@@ -150,7 +150,7 @@ particlesight/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI entry point + CORS
-│   │   ├── database.py          # SQLite connection setup
+│   │   ├── database.py          # PostgreSQL connection via DATABASE_URL
 │   │   ├── models/
 │   │   │   └── tables.py        # Dataset, Analysis tables
 │   │   ├── routers/             # API routers (in progress)
@@ -163,7 +163,7 @@ particlesight/
 │   │   │   └── llm.py           # Gemini AI insights (planned)
 │   │   └── data/                # Downloaded CERN CSV files (not committed)
 ├── frontend/                    # React app (not started)
-├── docker-compose.yml           # PostgreSQL container (for future use)
+├── docker-compose.yml           # PostgreSQL 18.3 container
 └── README.md
 ```
 
@@ -179,18 +179,21 @@ particlesight/
 ### Backend
 
 ```bash
-# 1. Create and activate virtual environment
+# 1. Start PostgreSQL via Docker
+docker compose up -d
+
+# 2. Create and activate virtual environment
 cd backend
 python -m venv venv
 venv\Scripts\activate        # Windows
 source venv/bin/activate     # Mac/Linux
 
-# 2. Install dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# 3. Create .env file (see Environment Variables below)
+# 4. Create .env file (see Environment Variables below)
 
-# 4. Start the API
+# 5. Start the API
 uvicorn app.main:app --reload
 ```
 

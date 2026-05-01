@@ -2,11 +2,15 @@
 venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
 
-# Sensitive environment variables (Gemini API keys)
+# Sensitive environment variables — NEVER commit these
 .env
+.env.*
 
-# Database (Local SQLite files)
+# Database files
 *.sqlite3
 *.db
 
@@ -14,8 +18,18 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Large CERN datasets (if you download them locally)
-*.csv
-*.json
+# Large CERN datasets — download locally, never commit
+backend/data/*.csv
+backend/data/*.json
 
+# Node / frontend
+node_modules/
+dist/
+.next/
+
+# IDE
+.vscode/
+.idea/
+
+# Blueprint / reference docs (not part of the app)
 /CERN

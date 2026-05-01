@@ -4,6 +4,22 @@
 
 ---
 
+## ⚠️ Disclaimer
+
+ParticleSight is an independent, open-source project and is **not affiliated with, endorsed by, or sponsored by CERN**. All data is sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) in accordance with their [Open Data Policy](https://opendata.cern.ch/docs/about). The CERN name and logo are trademarks of CERN and are not used in this project.
+
+> **Note:** This is an independent personal project and is not affiliated with or endorsed by CERN.
+
+---
+
+## About
+
+Built by a 4th year Computer Science student as a personal data accessibility platform for CERN's publicly released collision datasets.
+
+This is not a physics analysis tool — it is a **data platform** designed to make scientific datasets explorable by anyone, regardless of their physics background.
+
+---
+
 ## What is ParticleSight?
 
 ParticleSight is a full-stack web platform that takes real particle collision data from the CERN Open Data Portal and automatically discovers hidden patterns, correlations, and anomalies — then explains every finding in plain English using AI.
@@ -133,7 +149,7 @@ particlesight/
 │   │   │   ├── anomaly.py       # Isolation Forest anomaly detection
 │   │   │   ├── analyser.py      # Master pipeline
 │   │   │   └── llm.py           # Gemini AI insights
-│   │   └── data/                # Downloaded CERN CSV files
+│   │   └── data/                # Downloaded CERN CSV files (not committed)
 ├── frontend/                    # React app (in progress)
 ├── docker-compose.yml           # Local PostgreSQL container
 └── README.md
@@ -181,6 +197,8 @@ GEMINI_API_KEY=your_free_gemini_key_here
 SECRET_KEY=any_random_string
 ```
 
+> ⚠️ **Important:** Do not commit the `.env` file to GitHub. Ensure it is listed in your `.gitignore`. Never share your `GEMINI_API_KEY` or `SECRET_KEY` publicly.
+
 Get a free Gemini API key at [https://aistudio.google.com](https://aistudio.google.com) — no credit card needed.
 
 ---
@@ -213,8 +231,20 @@ Total hosting cost: **$0**
 
 ---
 
-## About
+## Data Sources
 
-Built by a 4th year Computer Science student as an open-source data accessibility platform for CERN's publicly released collision datasets.
+All datasets used by ParticleSight are sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) and are released under the [Creative Commons CC0](https://creativecommons.org/publicdomain/zero/1.0/) waiver, which permits free use, modification, and distribution.
 
-This is not a physics analysis tool — it is a **data platform** designed to make scientific datasets explorable by anyone, regardless of their physics background.
+| Dataset | Record |
+|---------|--------|
+| CMS Dimuon Events Run2010B | [opendata.cern.ch/record/700](https://opendata.cern.ch/record/700) |
+| CMS Run 2011A Multi-Lepton | [opendata.cern.ch/record/545](https://opendata.cern.ch/record/545) |
+
+
+---
+
+## License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+CERN Open Data used by this project is released under the [Creative Commons CC0 1.0 Universal (CC0 1.0) Public Domain Dedication](https://creativecommons.org/publicdomain/zero/1.0/).

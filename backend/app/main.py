@@ -8,13 +8,13 @@ from app.services.anomaly import AnomalyDetector
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Starting up the CERNSight API...")
+    print("Starting up the ParticleSight API...")
     init_db()
     print("database initialized successfully.")
     yield
-    print("Shutting down the CERNSight API...")
+    print("Shutting down the ParticleSight API...")
 
-app = FastAPI(title="CERNSight API", lifespan=lifespan)
+app = FastAPI(title="ParticleSight API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,9 +26,9 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the CERNSight API!",
+    return {"message": "Welcome to the ParticleSight API!",
             "status": "online",
-            "system": "CERNSight"}
+            "system": "ParticleSight"}
 
 @app.get("/analyze")
 async def analyze_physics():

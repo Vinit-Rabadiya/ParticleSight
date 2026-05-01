@@ -35,5 +35,5 @@ class CERNClient:
         except Exception as e:
             print(f"CERN Server Error: {e}")
             print("\nTIP: If the download fails, open the link in your browser,")
-            print(f"   save the file as '{filename}' in D:\\cernsight\\backend\\")
+            print(f"   save the file as '{filename}' in D:\\particlesight\\backend\\")
             return None

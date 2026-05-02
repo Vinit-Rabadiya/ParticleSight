@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 class Dataset(SQLModel, table=True):
@@ -20,4 +20,13 @@ class Analysis(SQLModel, table=True):
     dataset_id: str
     findings: str
     anomaly_count: int
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class AnalysisResult(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    analysis_id: str = Field(foreign_key="analysis.id")
+    distributions: str
+    top_corellations: str
+    anomaly_summary: str
+    ai_insights: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

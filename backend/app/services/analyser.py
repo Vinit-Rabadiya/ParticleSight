@@ -1,22 +1,49 @@
 from app.services.cern_client import CERNClient
 from app.services.profiler import profile_distributions
-from app.services.correlation import find_top_corellations
+from app.services.correlation import find_top_correlations
 from app.services.anomaly import detect_anomalies
 from app.services.llm import generate_insights
 
-#async func so that if network is slow downloading will also be slow, and FastAPI can handle other requests in the meantime
+# This is the master pipeline — it calls all four services in order
+# and combines their results into one dict.
+# It is called by the analysis router when a user triggers an analysis.
 
-async def run_full_analysis(csv_url, dataset_name):
-    df = await CERNClient.get_data(csv_url)  #to get dataframe
-    df.columns = df.columns.str.strip()  # Remove leading/trailing whitespace from column names
+async def run_full_analysis(csv_url: str, dataset_name: str) -> dict:
+    # Step 1 — Download the CSV from CERN (or load from local cache)
+    # get_data() is a regular function, not async, so no await needed
+    df = CERNClient.get_data(csv_url)
+
+    if df is None:
+        raise ValueError(f"Could not load data from {csv_url}")
+
+    # Step 2 — Clean column names (fixes trailing spaces like "px1 ")
+    df.columns = df.columns.str.strip()
+
+    # Step 3 — Run all three analysis services on the DataFrame
+    print("Profiling distributions...")
     distributions = profile_distributions(df)
-    top_corellations = find_top_corellations(df)
+
+    print("Finding correlations...")
+    top_correlations = find_top_correlations(df)
+
+    print("Detecting anomalies...")
     anomaly_summary = detect_anomalies(df)
-    analysis_data = {distributions, top_corellations, anomaly_summary}
-    ai_insights = generate_insights(analysis_data)
+
+    # Step 4 — Combine results into one dict to send to Gemini
+    analysis_data = {
+        "distributions": distributions,
+        "top_correlations": top_correlations,
+        "anomaly_summary": anomaly_summary
+    }
+
+    # Step 5 — Generate plain-English insights using Gemini API
+    print("Generating AI insights...")
+    ai_insights = generate_insights(analysis_data, dataset_name)
+
+    # Step 6 — Return everything combined
     return {
         "distributions": distributions,
-        "top_corellations": top_corellations,
+        "top_correlations": top_correlations,
         "anomaly_summary": anomaly_summary,
         "ai_insights": ai_insights
     }

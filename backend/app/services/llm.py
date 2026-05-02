@@ -1,72 +1,91 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
-#Configuration
+# Load the Gemini API key from .env
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=api_key)
 
-def generate_insights(analysis_data: dict, dataset_name: str):
+# Create the Gemini client using the new google-genai SDK
+client = genai.Client(api_key=api_key)
+
+def generate_insights(analysis_data: dict, dataset_name: str) -> list:
     """
     Sends CERN analysis results to Gemini and returns 5 plain-English insights.
+    analysis_data must have keys: distributions, top_correlations, anomaly_summary
     """
-    #creating model instance with JSON response configuration
-    model = genai.GenerativeModel(
-        "gemini-1.5-flash",
-        generation_config={"response_mime_type": "application/json"}
-    )
+    # Pull out the parts we need for the prompt
+    # These key names must match exactly what analyser.py puts in analysis_data
+    top_correlations = json.dumps(analysis_data.get("top_correlations", []), indent=2)
+    anomaly_summary = analysis_data.get("anomaly_summary", {})
+    distributions = analysis_data.get("distributions", {})
 
-    #extracting data for the prompt
-    correlations_json = json.dumps(analysis_data.get("correlations", []))
-    anomaly_summary = analysis_data.get("anomalies", {"count": 0, "percentage": 0, "top_features": []})
-    unusual_columns = analysis_data.get("unusual_columns", [])
+    # Find which columns were flagged as unusual (skewness > 2.0)
+    unusual_columns = [col for col, stats in distributions.items() if stats.get("is_unusual")]
 
-    #prompt
+    # Build the prompt — tell Gemini exactly what we want back
     prompt = f"""
-    Act as an expert Particle Physics Communicator for the ParticleSight platform.
-    Explain these CERN data findings to a non-expert audience in plain English.
+You are explaining particle physics data findings to a non-expert audience for the ParticleSight platform.
 
-    DATASET: {dataset_name}
-    TOP CORRELATIONS: {correlations_json}
-    ANOMALIES: {anomaly_summary['count']} events ({anomaly_summary['percentage']}%) involving {anomaly_summary['top_features']}
-    UNUSUAL DISTRIBUTIONS: {unusual_columns}
+Dataset: {dataset_name}
 
-    TASK:
-    Generate 5 distinct insights. For each insight, provide:
-    - title: A short, catchy name.
-    - explanation: A jargon-free explanation of the finding.
-    - surprise_level: A scale of 1-10.
-    - finding_type: (e.g., "Correlation", "Anomaly", or "Distribution")
+Here are the automated statistical findings:
 
-    OUTPUT FORMAT:
-    Return ONLY a JSON array of 5 objects. No extra text or markdown.
-    Example: 
-    [
-      {{"title": "Energy Link", "explanation": "...", "surprise_level": 5, "finding_type": "Correlation"}},
-      ...
-    ]
-    """
+TOP CORRELATIONS:
+{top_correlations}
+
+ANOMALY DETECTION:
+- Total events: {anomaly_summary.get("total_events", 0)}
+- Anomalies found: {anomaly_summary.get("total_anomalies", 0)} ({anomaly_summary.get("anomaly_percentage", 0)}%)
+- Features most different in anomalies: {anomaly_summary.get("most_anomalous_features", [])}
+
+UNUSUAL DISTRIBUTIONS (highly skewed columns):
+{unusual_columns}
+
+Generate exactly 5 insights from this data. Each insight must:
+1. Be written in plain English — no physics jargon
+2. Explain what was found and why it is interesting
+3. Be specific — mention actual variable names and numbers
+4. Have a surprise_level from 1 (expected) to 10 (very surprising)
+
+Return ONLY a valid JSON array. No extra text, no markdown.
+[
+  {{
+    "title": "Short title here",
+    "explanation": "Full plain-English explanation here",
+    "surprise_level": 7,
+    "finding_type": "correlation"
+  }}
+]
+
+finding_type must be one of: correlation, anomaly, distribution, pattern
+"""
 
     try:
-        #call the API
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+
         content = response.text
 
-        #clean and parse
-        # Some models wrap JSON in markdown blocks (```json ... ```), though mime_type helps prevent it.
+        # Strip markdown code fences if Gemini adds them
         if content.startswith("```"):
             content = content.strip("`").replace("json", "", 1).strip()
 
         return json.loads(content)
 
     except Exception as e:
-        #error handling
         print(f"Gemini API Error: {e}")
+        # Return a fallback so the rest of the analysis still works
         return [{
-            "title": "AI Insight Unavailable",
-            "explanation": "The AI is currently catching its breath. Please try again in a moment.",
+            "title": "AI Insights Unavailable",
+            "explanation": "The AI could not generate insights at this time. The statistical results above are still valid.",
             "surprise_level": 0,
-            "finding_type": "Error"
+            "finding_type": "error"
         }]

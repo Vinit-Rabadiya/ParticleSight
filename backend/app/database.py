@@ -12,7 +12,7 @@ if not DATABASE_URL:
 engine = create_engine(DATABASE_URL, echo=True)
 
 def init_db():
-    from app.models.tables import Dataset, Analysis
+    from app.models.tables import Dataset, Analysis, AnalysisResult
     SQLModel.metadata.create_all(engine)
 
 def get_session():

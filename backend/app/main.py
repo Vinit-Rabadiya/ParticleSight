@@ -3,46 +3,34 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.database import init_db
-from app.services.cern_client import CERNClient
-from app.services.anomaly import AnomalyDetector
+from app.routers import datasets, analysis
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting up the ParticleSight API...")
     init_db()
-    print("database initialized successfully.")
+    print("Database initialized successfully.")
     yield
     print("Shutting down the ParticleSight API...")
 
-app = FastAPI(title="ParticleSight API", lifespan=lifespan)
+app = FastAPI(title="ParticleSight API", version="1.0.0", lifespan=lifespan)
 
+# Allow the React frontend to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "https://particlesight.vercel.app"],
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,
 )
+
+# Register routers — each one handles a group of related endpoints
+app.include_router(datasets.router, prefix="/api/datasets")
+app.include_router(analysis.router, prefix="/api/analysis")
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the ParticleSight API!",
-            "status": "online",
-            "system": "ParticleSight"}
-
-@app.get("/analyze")
-async def analyze_physics():
-    """
-    Triggers the physics engine to load CERN data and run anomaly detection.
-    """
-    df = CERNClient.get_data()
-    if df is None:
-        return {"error": "Dataset not found in /data folder"}
-
-    anomalies = AnomalyDetector.find_outliers(df)
-
     return {
-        "total_events": len(df),
-        "anomalies_count": len(anomalies),
-        "anomalies": anomalies.to_dict(orient="records")
+        "message": "Welcome to the ParticleSight API!",
+        "status": "online",
+        "docs": "/docs"
     }

@@ -3,7 +3,6 @@ import json
 from cerebras.cloud.sdk import Cerebras
 from dotenv import load_dotenv
 
-# Load the Cerebras API key from .env
 load_dotenv()
 
 # Create the Cerebras client

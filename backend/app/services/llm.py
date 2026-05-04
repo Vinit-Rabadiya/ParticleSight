@@ -1,23 +1,22 @@
 import os
 import json
-from google import genai
-from google.genai import types
+from cerebras.cloud.sdk import Cerebras
 from dotenv import load_dotenv
 
-# Load the Gemini API key from .env
+# Load the Cerebras API key from .env
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
 
-# Create the Gemini client using the new google-genai SDK
-client = genai.Client(api_key=api_key)
+# Create the Cerebras client
+# Uses llama3.1-8b — fast, free, good enough for plain-English insight generation
+client = Cerebras(api_key=os.getenv("CEREBRAS_API_KEY"))
 
 def generate_insights(analysis_data: dict, dataset_name: str) -> list:
     """
-    Sends CERN analysis results to Gemini and returns 5 plain-English insights.
+    Sends CERN analysis results to Cerebras (Llama 3.1) and returns
+    5 plain-English insights as a list of dicts.
     analysis_data must have keys: distributions, top_correlations, anomaly_summary
     """
     # Pull out the parts we need for the prompt
-    # These key names must match exactly what analyser.py puts in analysis_data
     top_correlations = json.dumps(analysis_data.get("top_correlations", []), indent=2)
     anomaly_summary = analysis_data.get("anomaly_summary", {})
     distributions = analysis_data.get("distributions", {})
@@ -25,9 +24,8 @@ def generate_insights(analysis_data: dict, dataset_name: str) -> list:
     # Find which columns were flagged as unusual (skewness > 2.0)
     unusual_columns = [col for col, stats in distributions.items() if stats.get("is_unusual")]
 
-    # Build the prompt — tell Gemini exactly what we want back
-    prompt = f"""
-You are explaining particle physics data findings to a non-expert audience for the ParticleSight platform.
+    # Build the prompt
+    prompt = f"""You are explaining particle physics data findings to a non-expert audience for the ParticleSight platform.
 
 Dataset: {dataset_name}
 
@@ -50,7 +48,7 @@ Generate exactly 5 insights from this data. Each insight must:
 3. Be specific — mention actual variable names and numbers
 4. Have a surprise_level from 1 (expected) to 10 (very surprising)
 
-Return ONLY a valid JSON array. No extra text, no markdown.
+Return ONLY a valid JSON array. No extra text, no markdown, no code fences.
 [
   {{
     "title": "Short title here",
@@ -60,29 +58,36 @@ Return ONLY a valid JSON array. No extra text, no markdown.
   }}
 ]
 
-finding_type must be one of: correlation, anomaly, distribution, pattern
-"""
+finding_type must be one of: correlation, anomaly, distribution, pattern"""
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json"
-            )
+        response = client.chat.completions.create(
+            model="llama3.1-8b",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1500
         )
 
-        content = response.text
+        content = response.choices[0].message.content.strip()
 
-        # Strip markdown code fences if Gemini adds them
+        # Strip markdown code fences if the model adds them
         if content.startswith("```"):
-            content = content.strip("`").replace("json", "", 1).strip()
+            lines = content.split("\n")
+            # Remove first line (```json or ```) and last line (```)
+            content = "\n".join(lines[1:-1]).strip()
 
         return json.loads(content)
 
+    except json.JSONDecodeError as e:
+        print(f"Cerebras JSON parse error: {e}")
+        print(f"Raw response: {content}")
+        return [{
+            "title": "AI Insights Unavailable",
+            "explanation": "The AI returned an unexpected format. The statistical results above are still valid.",
+            "surprise_level": 0,
+            "finding_type": "error"
+        }]
     except Exception as e:
-        print(f"Gemini API Error: {e}")
-        # Return a fallback so the rest of the analysis still works
+        print(f"Cerebras API Error: {e}")
         return [{
             "title": "AI Insights Unavailable",
             "explanation": "The AI could not generate insights at this time. The statistical results above are still valid.",

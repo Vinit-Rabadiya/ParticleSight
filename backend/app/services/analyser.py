@@ -30,10 +30,14 @@ async def run_full_analysis(csv_url: str, dataset_name: str) -> dict:
     anomaly_summary = detect_anomalies(df)
 
     # Step 4 — Combine results into one dict to send to Gemini
+    # Strip anomaly_scores from the Gemini payload — it's 100k numbers
+    # and would exceed the token limit. The frontend gets it from the full result.
+    anomaly_summary_for_ai = {k: v for k, v in anomaly_summary.items() if k != "anomaly_scores"}
+
     analysis_data = {
         "distributions": distributions,
         "top_correlations": top_correlations,
-        "anomaly_summary": anomaly_summary
+        "anomaly_summary": anomaly_summary_for_ai
     }
 
     # Step 5 — Generate plain-English insights using Gemini API

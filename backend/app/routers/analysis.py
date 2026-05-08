@@ -93,6 +93,9 @@ def trigger_analysis(
         "message": "Analysis started. Poll GET /api/analysis/{id} to check status."
     }
 
+@router.get("/")
+def list_analyses(session:Session = Depends(get_session)):
+    return session.exec(Analysis).order_by(Analysis.triggered_at.desc()).all()
 
 @router.get("/{analysis_id}")
 def get_analysis_status(analysis_id: str, session: Session = Depends(get_session)):

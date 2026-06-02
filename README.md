@@ -51,7 +51,7 @@ A researcher, student, or curious person can select a CERN dataset, click Analys
 | scikit-learn | 1.5.2 | Isolation Forest anomaly detection |
 | cerebras-cloud-sdk | 1.67.0 | Llama 3.1 AI for plain-English insights (free) |
 
-### Frontend _(not started)_
+### Frontend _(in progress)_
 
 | Tool | Version | Purpose |
 |------|---------|---------|
@@ -61,6 +61,7 @@ A researcher, student, or curious person can select a CERN dataset, click Analys
 | Recharts | 2.x | Data visualisation charts |
 | TanStack Query | 5.x | Server state and caching |
 | React Router | 7.x | Client-side routing |
+| Axios | 1.x | HTTP client for API calls |
 
 ---
 
@@ -168,7 +169,8 @@ particlesight/
 │   │   │   └── tables.py        # Dataset, Analysis, AnalysisResult tables
 │   │   ├── routers/
 │   │   │   ├── datasets.py      # Dataset endpoints
-│   │   │   └── analysis.py      # Analysis trigger + results endpoints
+│   │   │   ├── analysis.py      # Analysis trigger + results endpoints
+│   │   │   └── insights.py      # AI insights endpoint
 │   │   └── services/
 │   │       ├── cern_client.py   # Download CSV + fetch DOI/metadata from CERN
 │   │       ├── profiler.py      # Distribution profiling
@@ -178,7 +180,18 @@ particlesight/
 │   │       └── llm.py           # Cerebras AI insights (Llama 3.1)
 │   ├── data/                    # Downloaded CERN CSV files (not committed)
 │   └── requirements.txt
-├── frontend/                    # React app (not started)
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── client.js        # Axios instance pointing to backend
+│   │   ├── hooks/               # TanStack Query hooks (in progress)
+│   │   ├── pages/               # Route-level components (in progress)
+│   │   ├── components/          # Reusable UI components (in progress)
+│   │   ├── App.jsx              # Route definitions
+│   │   ├── main.jsx             # App entry — QueryClient + BrowserRouter
+│   │   └── index.css            # Tailwind import
+│   ├── vite.config.js           # Vite + Tailwind plugin config
+│   └── package.json
 ├── docker-compose.yml           # PostgreSQL 18.3 container
 └── README.md
 ```
@@ -256,10 +269,12 @@ Total hosting cost: **$0**
 | Anomaly detection — Isolation Forest | ✅ Complete |
 | AI insights — Cerebras Llama 3.1 | ✅ Complete |
 | Master analysis pipeline (analyser.py) | ✅ Complete |
-| FastAPI routers (datasets + analysis) | ✅ Complete |
+| FastAPI routers (datasets + analysis + insights) | ✅ Complete |
 | PostgreSQL integration | ✅ Complete |
 | Full backend tested end-to-end | ✅ Complete |
-| React frontend | ⬜ Not started |
+| React + Vite + Tailwind setup | ✅ Complete |
+| Axios client + TanStack Query + React Router setup | ✅ Complete |
+| React pages and components | 🔄 In progress |
 | Deployment | ⬜ Not started |
 
 ---

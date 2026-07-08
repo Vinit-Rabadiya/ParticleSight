@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import { useAnalysisStatus, useAnalysisResults } from "../hooks/useAnalysis";
 import DistributionChart from "../components/DistributionChart";
 import CorrelationMatrix from "../components/CorrelationMatrix";
+import AnomalyScatterPlot from "../components/AnomalyScatterPlot";
 
 function Dashboard() {
   const { analysisId } = useParams();
@@ -56,6 +57,7 @@ function Dashboard() {
           {/* Correlation matrix */}
           <CorrelationMatrix correlations={results.correlations} />
           {/* Anomaly scatter plot */}
+          <AnomalyScatterPlot anomalyData={results.anomaly_data} />
         </div>
         {/* Right 1/3 — AI insights */}
         <div className="col-span-1 flex flex-col gap-4">

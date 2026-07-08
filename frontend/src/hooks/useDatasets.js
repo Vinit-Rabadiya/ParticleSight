@@ -1,12 +1,13 @@
-import {useQuery} from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import client from "../api/client";
 
 //fetches the list of datasets from GET /api/datasets/ and returns them.
 function useDatasets() {
-  const { data, isLoading, error } = useQuery({
+  return useQuery({
     queryKey: ["datasets"],
     queryFn: async () => {
-      return client.get("/datasets").then((res) => res.data);
+      const response = await client.get("/api/datasets/");
+      return response.data;
     },
   });
 }

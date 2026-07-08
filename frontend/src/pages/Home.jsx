@@ -1,13 +1,12 @@
 import useDatasets from "../hooks/useDatasets";
-import { useNavigation } from "react-router-dom";
 import client from "../api/client";
 import DatasetCard from "../components/DatasetCard";
 
 function Home() {
-  const { data: datasets, isLoading, error } = useDatasets();
+  const { data: datasets = [], isLoading, isError, error } = useDatasets();
 
   const handleAnalyse = async (datasetId) => {
-    const res = await client.post(`/api/analysis/? dataset_id=` + datasetId);
+    const res = await client.post(`/api/analysis/?dataset_id=${datasetId}`);
     return res.data;
   };
 
@@ -26,7 +25,9 @@ function Home() {
         </div>
       ) : isError ? (
         <div className="text-center py-12">
-          <p className="text-red-600">Failed to load datasets.</p>
+          <p className="text-red-600">
+            {error?.message || "Failed to load datasets."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

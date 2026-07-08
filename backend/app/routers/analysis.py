@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from app.database import get_session
 from app.models.tables import Dataset, Analysis, AnalysisResult
 from app.services.analyser import run_full_analysis
+from app.services.cern_client import CERNClient
 import asyncio
 
 router = APIRouter(tags=["analysis"])
@@ -59,32 +60,63 @@ def execute_analysis_pipeline(analysis_id: str, csv_url: str, dataset_name: str)
 
 @router.post("/")
 def trigger_analysis(
-    dataset_id: str,
-    background_tasks: BackgroundTasks,
+    dataset_id: str | None = None,
+    cern_link: str | None = None,
+    background_tasks: BackgroundTasks = None,
     session: Session = Depends(get_session)
 ):
     """
     Triggers a new analysis for a dataset.
-    Returns immediately with an analysis ID.
-    The actual analysis runs in the background.
-    Poll GET /api/analysis/{id} to check when it's done.
+    If a dataset_id is provided, it uses an existing stored dataset.
+    Otherwise, it accepts a CERN link, creates a temporary dataset record,
+    and starts analysis from that URL.
     """
-    dataset = session.get(Dataset, dataset_id)
-    if not dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found.")
+    if dataset_id:
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Dataset not found.")
 
-    # Create an Analysis record with status "pending"
-    new_analysis = Analysis(dataset_id=dataset_id)
+        analysis_dataset_id = dataset_id
+        analysis_url = dataset.url
+        analysis_name = dataset.name
+    else:
+        if not cern_link:
+            raise HTTPException(status_code=400, detail="Provide either dataset_id or cern_link.")
+
+        record_id = CERNClient.extract_record_id(cern_link)
+        if not record_id:
+            raise HTTPException(status_code=400, detail="Could not parse a CERN record ID from the provided link.")
+
+        metadata = CERNClient.fetch_dataset_metadata(record_id)
+        new_dataset = Dataset(
+            cern_record_id=record_id,
+            name=metadata.get("title", f"CERN Dataset {record_id}"),
+            url=cern_link,
+            category="particle-physics",
+            doi=metadata.get("doi"),
+            doi_url=metadata.get("doi_url"),
+            experiment=metadata.get("experiment"),
+            year=metadata.get("year"),
+            description=metadata.get("description")
+        )
+        session.add(new_dataset)
+        session.commit()
+        session.refresh(new_dataset)
+
+        analysis_dataset_id = new_dataset.id
+        analysis_url = new_dataset.url
+        analysis_name = new_dataset.name
+
+    new_analysis = Analysis(dataset_id=analysis_dataset_id)
     session.add(new_analysis)
     session.commit()
     session.refresh(new_analysis)
 
-    # Add the pipeline to background tasks — runs after this function returns
     background_tasks.add_task(
         execute_analysis_pipeline,
         new_analysis.id,
-        dataset.url,
-        dataset.name
+        analysis_url,
+        analysis_name
     )
 
     return {

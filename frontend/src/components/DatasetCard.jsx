@@ -1,4 +1,4 @@
-function DatasetCard({ dataset, onAnalyse }) {
+function DatasetCard({ dataset }) {
   const badgeClass =
     dataset.experiment === "CMS"
       ? "bg-blue-100 text-blue-800"
@@ -30,13 +30,6 @@ function DatasetCard({ dataset, onAnalyse }) {
           View on CERN
         </a>
       )}
-
-      <button
-        onClick={() => onAnalyse(dataset.id)}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-      >
-        Analyse This Dataset
-      </button>
     </div>
   );
 }

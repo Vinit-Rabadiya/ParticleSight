@@ -5,6 +5,30 @@ import os
 
 class CERNClient:
     @staticmethod
+    def extract_record_id(url: str) -> str | None:
+        """Extract a CERN Open Data record ID from a record or file URL."""
+        if not url:
+            return None
+
+        try:
+            cleaned = url.strip()
+            if "/record/" not in cleaned:
+                return None
+
+            parts = [part for part in cleaned.split("/") if part]
+            if "record" not in parts:
+                return None
+
+            record_index = parts.index("record")
+            if record_index + 1 >= len(parts):
+                return None
+
+            record_id = parts[record_index + 1]
+            return record_id.split("?")[0].split("#")[0]
+        except Exception:
+            return None
+
+    @staticmethod
     def get_data(url: str = "https://opendata.cern.ch/record/700/files/MuRun2010B_0.csv"):
         # Derive filename from the URL and save to backend/data/
         base_dir = os.path.dirname(os.path.abspath(__file__))

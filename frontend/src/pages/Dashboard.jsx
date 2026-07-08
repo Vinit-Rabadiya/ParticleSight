@@ -3,6 +3,7 @@ import { useAnalysisStatus, useAnalysisResults } from "../hooks/useAnalysis";
 import DistributionChart from "../components/DistributionChart";
 import CorrelationMatrix from "../components/CorrelationMatrix";
 import AnomalyScatterPlot from "../components/AnomalyScatterPlot";
+import InsightCard from "../components/InsightCard";
 
 function Dashboard() {
   const { analysisId } = useParams();

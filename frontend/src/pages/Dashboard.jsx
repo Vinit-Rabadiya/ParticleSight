@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useAnalysisStatus, useAnalysisResults } from "../hooks/useAnalysis";
 import DistributionChart from "../components/DistributionChart";
+import CorrelationMatrix from "../components/CorrelationMatrix";
 
 function Dashboard() {
   const { analysisId } = useParams();
@@ -53,6 +54,7 @@ function Dashboard() {
             />
           ))}
           {/* Correlation matrix */}
+          <CorrelationMatrix correlations={results.correlations} />
           {/* Anomaly scatter plot */}
         </div>
         {/* Right 1/3 — AI insights */}

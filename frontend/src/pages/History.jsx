@@ -70,14 +70,14 @@ function History() {
 
         <tbody>
           {analyses.map((analysis) => (
-            <tr key={analysis.analysis_id}>
+            <tr key={analysis.id}>
               <td className="border border-gray-200 px-4 py-2">
                 {analysis.dataset_id}
               </td>
 
               <td className="border border-gray-200 px-4 py-2">
-                {analysis.created_at
-                  ? new Date(analysis.created_at).toLocaleString()
+                {analysis.triggered_at
+                  ? new Date(analysis.triggered_at).toLocaleString()
                   : "N/A"}
               </td>
 
@@ -93,7 +93,7 @@ function History() {
 
               <td className="border border-gray-200 px-4 py-2">
                 <button
-                  onClick={() => navigate(`/dashboard/${analysis.analysis_id}`)}
+                  onClick={() => navigate(`/dashboard/${analysis.id}`)}
                   className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700"
                 >
                   View

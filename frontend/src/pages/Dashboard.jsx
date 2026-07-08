@@ -8,11 +8,23 @@ import InsightCard from "../components/InsightCard";
 function Dashboard() {
   const { analysisId } = useParams();
   const { data: statusData } = useAnalysisStatus(analysisId);
+  const status = statusData?.status;
   const isCompleted = statusData?.status === "completed";
   const { data: results, isLoading } = useAnalysisResults(
     analysisId,
     isCompleted,
   );
+
+  if (status === "failed") {
+    return (
+      <div className="mx-auto max-w-3xl rounded-xl border border-red-200 bg-red-50 p-6 text-red-800">
+        <h2 className="text-xl font-semibold">Analysis failed</h2>
+        <p className="mt-2 text-sm">
+          {statusData?.error_message || "The analysis could not complete."}
+        </p>
+      </div>
+    );
+  }
 
   if (!isCompleted) {
     return (
@@ -42,32 +54,42 @@ function Dashboard() {
   }
 
   if (isCompleted && results) {
+    const distributionCharts = Object.entries(results.distributions || {}).map(
+      ([columnName, stats]) => ({
+        columnName,
+        data: stats.histogram,
+        isUnusual: stats.is_unusual,
+      }),
+    );
+
     return (
       <div className="grid grid-cols-3 gap-6">
         {/* Left 2/3 — charts */}
         <div className="col-span-2 flex flex-col gap-6">
           {/* Distribution charts */}
-          {results.distribution_charts.map((chart, i) => (
+          {distributionCharts.map((chart, i) => (
             <DistributionChart
               key={i}
-              columnName={chart.column_name}
+              columnName={chart.columnName}
               data={chart.data}
-              isUnusual={chart.is_unusual}
+              isUnusual={chart.isUnusual}
             />
           ))}
           {/* Correlation matrix */}
-          <CorrelationMatrix correlations={results.correlations} />
+          <CorrelationMatrix correlations={results.top_correlations || []} />
           {/* Anomaly scatter plot */}
-          <AnomalyScatterPlot anomalyData={results.anomaly_data} />
+          <AnomalyScatterPlot anomalyData={results.anomaly_summary} />
         </div>
         {/* Right 1/3 — AI insights */}
         <div className="col-span-1 flex flex-col gap-4">
-          {results.ai_insights.map((insight, i) => (
+          {(results.ai_insights || []).map((insight, i) => (
             <InsightCard key={i} insight={insight} />
           ))}
         </div>
       </div>
     );
   }
+
+  return null;
 }
 export default Dashboard;

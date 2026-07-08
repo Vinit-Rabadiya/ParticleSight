@@ -33,6 +33,7 @@ class CERNClient:
         # Derive filename from the URL and save to backend/data/
         base_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.normpath(os.path.join(base_dir, "..", "..", "data"))
+        os.makedirs(data_dir, exist_ok=True)
         filename = os.path.join(data_dir, url.split("/")[-1])
 
         # 1. Always check if the file is already here first
@@ -49,7 +50,7 @@ class CERNClient:
             response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
 
-            with open(filename, "w") as f:
+            with open(filename, "w", encoding="utf-8") as f:
                 f.write(response.text)
 
             df = pd.read_csv(io.StringIO(response.text))

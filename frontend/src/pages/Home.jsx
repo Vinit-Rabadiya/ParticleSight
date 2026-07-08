@@ -1,12 +1,32 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import useDatasets from "../hooks/useDatasets";
 import client from "../api/client";
 import DatasetCard from "../components/DatasetCard";
 
 function Home() {
+  const navigate = useNavigate();
   const { data: datasets = [], isLoading, isError, error } = useDatasets();
   const [cernLink, setCernLink] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+
+  const getErrorMessage = (err) => {
+    const detail = err?.response?.data?.detail;
+
+    if (typeof detail === "string") {
+      return detail;
+    }
+
+    if (Array.isArray(detail)) {
+      return detail.map((item) => item?.msg || item).join(", ");
+    }
+
+    if (detail?.msg) {
+      return detail.msg;
+    }
+
+    return "Failed to start analysis.";
+  };
 
   const handleAnalyse = async () => {
     const trimmedLink = cernLink.trim();
@@ -17,14 +37,13 @@ function Home() {
     }
 
     try {
-      const res = await client.post("/api/analysis/", null, {
-        params: { cern_link: trimmedLink },
+      const res = await client.post("/api/analysis/", {
+        cern_link: trimmedLink,
       });
-      setStatusMessage(`Analysis started. ${res.data.message}`);
+      setStatusMessage("Analysis started. Opening dashboard...");
+      navigate(`/dashboard/${res.data.analysis_id}`);
     } catch (err) {
-      setStatusMessage(
-        err?.response?.data?.detail || "Failed to start analysis.",
-      );
+      setStatusMessage(getErrorMessage(err));
     }
   };
 
@@ -69,6 +88,15 @@ function Home() {
           {statusMessage && (
             <p className="mt-3 text-sm text-blue-700">{statusMessage}</p>
           )}
+
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => navigate("/history")}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              View Analysis History
+            </button>
+          </div>
         </div>
       )}
 

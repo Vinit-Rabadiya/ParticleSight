@@ -2,13 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.database import init_db
+from app.database import init_db, RESET_DB_ON_STARTUP
 from app.routers import datasets, analysis
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting up the ParticleSight API...")
-    init_db()
+    init_db(reset=RESET_DB_ON_STARTUP)
     print("Database initialized successfully.")
     yield
     print("Shutting down the ParticleSight API...")

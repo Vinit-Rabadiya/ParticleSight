@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from cerebras.cloud.sdk import Cerebras
 from dotenv import load_dotenv
 
@@ -9,12 +10,12 @@ load_dotenv()
 # Uses llama3.1-8b — fast, free, good enough for plain-English insight generation
 API_KEY = os.getenv("CEREBRAS_API_KEY")
 client = Cerebras(api_key=API_KEY) if API_KEY else None
-PREFERRED_MODEL = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
+PREFERRED_MODEL = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
 MODEL_CANDIDATES = [
     PREFERRED_MODEL,
-    "llama-3.3-70b",
-    "llama3.1-70b",
-    "llama3.1-8b",
+    "gpt-oss-120b",
+    "gemma-4-31b",
+    "zai-glm-4.7",
 ]
 
 
@@ -25,18 +26,52 @@ def _local_fallback_insights(analysis_data: dict, dataset_name: str, reason: str
     top_correlations = analysis_data.get("top_correlations", [])
     anomaly_summary = analysis_data.get("anomaly_summary", {})
     distributions = analysis_data.get("distributions", {})
+    columns = list(distributions.keys())
+
+    preview_columns = ", ".join(columns[:8]) if columns else "no numeric columns detected"
 
     insights.append(
         {
             "title": "Dataset At A Glance",
             "explanation": (
                 f"{dataset_name} contains {anomaly_summary.get('total_events', 0)} events with "
-                f"{len(distributions)} numeric features profiled for patterns, anomalies, and correlations."
+                f"{len(distributions)} numeric features profiled for patterns, anomalies, and correlations. "
+                f"Examples of columns: {preview_columns}."
             ),
             "surprise_level": 2,
             "finding_type": "pattern",
         }
     )
+
+    if columns:
+        column_meaning_lines = []
+        for column_name in columns[:20]:
+            ref_url = f"https://opendata.cern.ch/search?q={column_name}"
+            column_meaning_lines.append(
+                f"- {column_name}: Physics meaning unavailable in local fallback mode. Source: {ref_url}"
+            )
+
+        insights.append(
+            {
+                "title": "Column Meanings",
+                "explanation": "\n".join(column_meaning_lines),
+                "surprise_level": 1,
+                "finding_type": "pattern",
+            }
+        )
+
+        insights.append(
+            {
+                "title": "Column Guide",
+                "explanation": (
+                    "Column names are interpreted from the data itself. "
+                    f"Start with these fields: {preview_columns}. "
+                    "Use min/mean/max patterns and correlations to understand each column's role."
+                ),
+                "surprise_level": 2,
+                "finding_type": "pattern",
+            }
+        )
 
     if top_correlations:
         strongest = top_correlations[0]
@@ -102,9 +137,159 @@ def _local_fallback_insights(analysis_data: dict, dataset_name: str, reason: str
 
     return insights[:5]
 
+
+def _build_column_summaries(distributions: dict, limit: int = 25) -> list:
+    summaries = []
+    for column_name, stats in list(distributions.items())[:limit]:
+        summaries.append(
+            {
+                "column": column_name,
+                "mean": stats.get("mean"),
+                "median": stats.get("median"),
+                "min": stats.get("min"),
+                "max": stats.get("max"),
+                "std_dev": stats.get("std_dev"),
+                "missing_values": stats.get("missing_values"),
+                "is_unusual": stats.get("is_unusual"),
+            }
+        )
+    return summaries
+
+
+def _parse_model_json_array(content: str):
+    """Best-effort parse for model output that should contain a JSON array."""
+    text = (content or "").strip()
+    if not text:
+        raise json.JSONDecodeError("Empty model response", text, 0)
+
+    if text.startswith("```"):
+        lines = text.split("\n")
+        text = "\n".join(lines[1:-1]).strip()
+
+    # First try direct parse
+    parsed = json.loads(text)
+    if isinstance(parsed, list):
+        return parsed
+    raise json.JSONDecodeError("Expected a JSON array", text, 0)
+
+
+def _parse_model_json_array_best_effort(content: str):
+    """Parse JSON array even when the model adds extra prefix/suffix text."""
+    try:
+        return _parse_model_json_array(content)
+    except json.JSONDecodeError:
+        pass
+
+    text = (content or "").strip()
+    match = re.search(r"\[\s*\{[\s\S]*\}\s*\]", text)
+    if match:
+        return _parse_model_json_array(match.group(0))
+
+    raise json.JSONDecodeError("No JSON array found in model response", text, 0)
+
+
+def _extract_bullet_lines(text: str) -> list:
+    lines = []
+    for line in (text or "").split("\n"):
+        cleaned = line.strip()
+        if cleaned.startswith("-"):
+            lines.append(cleaned)
+    return lines
+
+
+def _find_column_meanings_insight(insights: list):
+    for insight in insights:
+        title = str(insight.get("title", "")).lower()
+        if "column meanings" in title:
+            return insight
+
+    for insight in insights:
+        explanation = str(insight.get("explanation", ""))
+        bullets = _extract_bullet_lines(explanation)
+        if bullets and any("source:" in b.lower() for b in bullets):
+            return insight
+
+    return None
+
+
+def _generate_column_meanings_text(model_name: str, dataset_name: str, distributions: dict):
+    columns = list(distributions.keys())[:20]
+    if not columns:
+        return ""
+
+    prompt = f"""You are a particle-physics explainer.
+
+Dataset: {dataset_name}
+Columns: {columns}
+
+Return ONLY bullet lines, one per column, in this exact format:
+- <column>: <physics meaning>. Source: <url>
+
+Rules:
+1) Explain likely physics meaning in plain English.
+2) Include likely units when appropriate.
+3) Each line must include one source URL.
+4) No JSON, no markdown fences, no extra text.
+"""
+
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1200,
+    )
+    content = response.choices[0].message.content.strip()
+    bullet_lines = _extract_bullet_lines(content)
+    if not bullet_lines:
+        return ""
+    return "\n".join(bullet_lines[:20])
+
+
+def _ensure_column_meanings_insight(
+    insights: list,
+    model_name: str,
+    dataset_name: str,
+    distributions: dict,
+) -> list:
+    if not isinstance(insights, list):
+        return insights
+
+    existing = _find_column_meanings_insight(insights)
+    if existing:
+        existing["title"] = "Column Meanings"
+        return insights
+
+    try:
+        explanation = _generate_column_meanings_text(model_name, dataset_name, distributions)
+    except Exception:
+        return insights
+
+    if not explanation:
+        return insights
+
+    new_item = {
+        "title": "Column Meanings",
+        "explanation": explanation,
+        "surprise_level": 4,
+        "finding_type": "pattern",
+    }
+
+    if len(insights) >= 5:
+        replace_index = None
+        for idx, item in enumerate(insights):
+            if "column guide" in str(item.get("title", "")).lower():
+                replace_index = idx
+                break
+        if replace_index is None:
+            replace_index = len(insights) - 1
+        insights[replace_index] = new_item
+        return insights
+
+    insights.append(new_item)
+    return insights
+
 def generate_insights(analysis_data: dict, dataset_name: str) -> list:
     """
-    Sends CERN analysis results to Cerebras (Llama 3.1) and returns
+    Sends analysis results to Cerebras and returns
     5 plain-English insights as a list of dicts.
     analysis_data must have keys: distributions, top_correlations, anomaly_summary
     """
@@ -112,16 +297,20 @@ def generate_insights(analysis_data: dict, dataset_name: str) -> list:
     top_correlations = json.dumps(analysis_data.get("top_correlations", []), indent=2)
     anomaly_summary = analysis_data.get("anomaly_summary", {})
     distributions = analysis_data.get("distributions", {})
+    column_summaries = json.dumps(_build_column_summaries(distributions), indent=2)
 
     # Find which columns were flagged as unusual (skewness > 2.0)
     unusual_columns = [col for col, stats in distributions.items() if stats.get("is_unusual")]
 
     # Build the prompt
-    prompt = f"""You are explaining particle physics data findings to a non-expert audience for the ParticleSight platform.
+    prompt = f"""You are a data analyst explaining results to non-experts.
 
 Dataset: {dataset_name}
 
 Here are the automated statistical findings:
+
+COLUMN SUMMARIES (name + descriptive stats):
+{column_summaries}
 
 TOP CORRELATIONS:
 {top_correlations}
@@ -135,10 +324,16 @@ UNUSUAL DISTRIBUTIONS (highly skewed columns):
 {unusual_columns}
 
 Generate exactly 5 insights from this data. Each insight must:
-1. Be written in plain English — no physics jargon
+1. Be written in plain English for general users
 2. Explain what was found and why it is interesting
 3. Be specific — mention actual variable names and numbers
 4. Have a surprise_level from 1 (expected) to 10 (very surprising)
+5. Include at least one dataset-overview insight that explains what the dataset appears to contain
+6. Include at least one column-guide insight that explains what important columns likely represent
+7. Include one insight with title exactly "Column Meanings" and explanation formatted as bullet points, one line per column in this exact format: "- <column>: <physics meaning>. Source: <url>"
+8. For "Column Meanings", explain each variable in particle-physics terms (kinematics, detector, or reconstruction context), and include likely units only when appropriate (for example GeV, radians)
+9. For each column bullet, include one authoritative reference URL for the exact definition (prefer CERN Open Data docs, experiment docs, PDG, or other trusted HEP references)
+10. If uncertain, use language like "likely" or "probably" instead of presenting guesses as facts
 
 Return ONLY a valid JSON array. No extra text, no markdown, no code fences.
 [
@@ -167,14 +362,15 @@ finding_type must be one of: correlation, anomaly, distribution, pattern"""
 
             content = response.choices[0].message.content.strip()
 
-            # Strip markdown code fences if the model adds them
-            if content.startswith("```"):
-                lines = content.split("\n")
-                # Remove first line (```json or ```) and last line (```)
-                content = "\n".join(lines[1:-1]).strip()
-
             try:
-                return json.loads(content)
+                parsed = _parse_model_json_array_best_effort(content)
+                parsed = _ensure_column_meanings_insight(
+                    parsed,
+                    model_name,
+                    dataset_name,
+                    distributions,
+                )
+                return parsed
             except json.JSONDecodeError as parse_error:
                 last_error = parse_error
                 continue

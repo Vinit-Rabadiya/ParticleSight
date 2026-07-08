@@ -3,9 +3,11 @@ import {
   Scatter,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
+  Label,
 } from "recharts";
 
 function AnomalyScatterPlot({ anomalyData }) {
@@ -26,17 +28,37 @@ function AnomalyScatterPlot({ anomalyData }) {
     }
   });
 
-    return (
+  return (
     <div className="rounded-lg border bg-white p-4 shadow">
       <h1 className="text-lg font-semibold">Anomaly Detection</h1>
       <ResponsiveContainer width="100%" height={300}>
         <ScatterChart>
-          <XAxis dataKey="index" />
-          <YAxis dataKey="score" />
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="index" tick={{ fontSize: 12 }}>
+            <Label value="Event index" position="insideBottom" offset={-2} />
+          </XAxis>
+          <YAxis dataKey="score" tick={{ fontSize: 12 }}>
+            <Label
+              value="Anomaly score"
+              angle={-90}
+              position="insideLeft"
+              style={{ textAnchor: "middle" }}
+            />
+          </YAxis>
           <Tooltip />
           <Legend />
-          <Scatter name="Normal" data={normalPoints} fill="#3B82F6" opacity={0.4} />
-          <Scatter name="Anomaly" data={anomalyPoints} fill="#EF4444" opacity={.8}/>
+          <Scatter
+            name="Normal"
+            data={normalPoints}
+            fill="#3B82F6"
+            opacity={0.4}
+          />
+          <Scatter
+            name="Anomaly"
+            data={anomalyPoints}
+            fill="#EF4444"
+            opacity={0.8}
+          />
         </ScatterChart>
       </ResponsiveContainer>
     </div>

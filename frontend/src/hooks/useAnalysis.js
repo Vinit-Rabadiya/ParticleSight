@@ -20,7 +20,7 @@ function useAnalysisStatus(analysisId) {
 }
 
 function useAnalysisResults(analysisId, isCompleted) {
-  const { data, isLoading, error } = useQuery({
+  return useQuery({
     queryKey: ["analysis-results", analysisId],
     queryFn: async () => {
       return client

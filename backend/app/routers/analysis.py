@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from pydantic import BaseModel
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from app.database import get_session
@@ -8,6 +9,11 @@ from app.services.cern_client import CERNClient
 import asyncio
 
 router = APIRouter(tags=["analysis"])
+
+
+class AnalysisRequest(BaseModel):
+    dataset_id: str | None = None
+    cern_link: str | None = None
 
 # This helper runs the full analysis pipeline and saves results to the DB.
 # It runs as a background task so the API returns immediately
@@ -60,10 +66,11 @@ def execute_analysis_pipeline(analysis_id: str, csv_url: str, dataset_name: str)
 
 @router.post("/")
 def trigger_analysis(
+    payload: AnalysisRequest | None = None,
     dataset_id: str | None = None,
     cern_link: str | None = None,
     background_tasks: BackgroundTasks = None,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
     """
     Triggers a new analysis for a dataset.
@@ -71,6 +78,10 @@ def trigger_analysis(
     Otherwise, it accepts a CERN link, creates a temporary dataset record,
     and starts analysis from that URL.
     """
+    if payload is not None:
+        dataset_id = payload.dataset_id or dataset_id
+        cern_link = payload.cern_link or cern_link
+
     if dataset_id:
         dataset = session.get(Dataset, dataset_id)
         if not dataset:

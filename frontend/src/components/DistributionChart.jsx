@@ -3,8 +3,10 @@ import {
   Bar,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Label,
 } from "recharts";
 
 function DistributionChart({ columnName, data, isUnusual }) {
@@ -18,19 +20,35 @@ function DistributionChart({ columnName, data, isUnusual }) {
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-lg font-semibold">
           {columnName}
-          (isUnusual &&{" "}
-          <span className="text-red-500 text-sm font-medium">⚠️</span>)
+          {isUnusual && (
+            <span className="text-red-500 text-sm font-medium">⚠️</span>
+          )}
         </h3>
         {isUnusual && (
-           <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
+          <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
             Unusual Distribution
           </span>
         )}
       </div>
+
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={chartData}>
-          <XAxis dataKey="bin" />
-          <YAxis />
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="bin" tick={{ fontSize: 12 }}>
+            <Label
+              value={`${columnName} value range`}
+              offset={-2}
+              position="insideBottom"
+            />
+          </XAxis>
+          <YAxis tick={{ fontSize: 12 }}>
+            <Label
+              value="Number of events"
+              angle={-90}
+              position="insideLeft"
+              style={{ textAnchor: "middle" }}
+            />
+          </YAxis>
           <Tooltip />
           <Bar dataKey="count" fill="#3B82F6" />
         </BarChart>

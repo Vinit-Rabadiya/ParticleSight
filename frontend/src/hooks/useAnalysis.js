@@ -1,14 +1,15 @@
-import useQuery from "@tanstack/react-query";
-import analysisClient from "../api/analysisClient";
+import { useQuery } from "@tanstack/react-query";
+import client from "../api/client";
 
 //fetches the list of analyses from GET /api/analyses/ and returns them.
-function useAnalysisStatus() {
-  const { data, isLoading, error } = useQuery({
+function useAnalysisStatus(analysisId) {
+  return useQuery({
     queryKey: ["analysis", analysisId],
+
     queryFn: async () => {
-      return analysisClient
-        .get("/api/analysis" + analysisId)
-        .then((res) => res.data);
+      const response = await client.get(`/api/analysis/${analysisId}`);
+
+      return response.data;
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -22,7 +23,7 @@ function useAnalysisResults(analysisId, isCompleted) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analysis-results", analysisId],
     queryFn: async () => {
-      return analysisClient
+      return client
         .get("/api/analysis/" + analysisId + "/results")
         .then((res) => res.data);
     },

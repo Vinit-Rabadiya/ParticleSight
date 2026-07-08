@@ -1,4 +1,4 @@
-import useQuery from "@tanstack/react-query";
+import {useQuery} from "@tanstack/react-query";
 import client from "../api/client";
 
 //fetches the list of datasets from GET /api/datasets/ and returns them.

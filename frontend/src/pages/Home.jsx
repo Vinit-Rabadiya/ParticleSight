@@ -1,5 +1,5 @@
 import useDatasets from "../hooks/useDatasets";
-import useNavigation from "react-router-dom";
+import { useNavigation } from "react-router-dom";
 import client from "../api/client";
 import DatasetCard from "../components/DatasetCard";
 
@@ -42,3 +42,5 @@ function Home() {
     </div>
   );
 }
+
+export default Home;

@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useAnalysisStatus, useAnalysisResults } from "../hooks/useAnalysis";
+import DistributionChart from "../components/DistributionChart";
 
 function Dashboard() {
   const { analysisId } = useParams();
@@ -43,6 +44,14 @@ function Dashboard() {
         {/* Left 2/3 — charts */}
         <div className="col-span-2 flex flex-col gap-6">
           {/* Distribution charts */}
+          {results.distribution_charts.map((chart, i) => (
+            <DistributionChart
+              key={i}
+              columnName={chart.column_name}
+              data={chart.data}
+              isUnusual={chart.is_unusual}
+            />
+          ))}
           {/* Correlation matrix */}
           {/* Anomaly scatter plot */}
         </div>

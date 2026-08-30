@@ -3,58 +3,52 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Label,
 } from "recharts";
 
-function DistributionChart({ columnName, data, isUnusual }) {
+// Shows a histogram for one numeric column
+// Props: columnName (string), data ({ counts, bin_edges }), isUnusual (bool)
+export default function DistributionChart({ columnName, data, isUnusual }) {
+  // Transform histogram data into the format Recharts expects
   const chartData = data.counts.map((count, i) => ({
-    bin: data.bin_edges[i].toFixed(2),
-    count: count,
+    bin: Number(data.bin_edges[i]).toFixed(2),
+    count,
   }));
 
   return (
-    <div className="rounded-lg border bg-white p-4 shadow">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-lg font-semibold">
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      {/* Column name + unusual flag */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-sm font-semibold text-gray-700">
           {columnName}
-          {isUnusual && (
-            <span className="text-red-500 text-sm font-medium">⚠️</span>
-          )}
-        </h3>
+        </span>
         {isUnusual && (
-          <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
-            Unusual Distribution
+          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+            Unusual
           </span>
         )}
       </div>
 
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="bin" tick={{ fontSize: 12 }}>
-            <Label
-              value={`${columnName} value range`}
-              offset={-2}
-              position="insideBottom"
-            />
-          </XAxis>
-          <YAxis tick={{ fontSize: 12 }}>
-            <Label
-              value="Number of events"
-              angle={-90}
-              position="insideLeft"
-              style={{ textAnchor: "middle" }}
-            />
-          </YAxis>
-          <Tooltip />
-          <Bar dataKey="count" fill="#3B82F6" />
+      {/* Bar chart */}
+      <ResponsiveContainer width="100%" height={120}>
+        <BarChart
+          data={chartData}
+          margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
+        >
+          <XAxis
+            dataKey="bin"
+            tick={{ fontSize: 9 }}
+            interval="preserveStartEnd"
+          />
+          <YAxis tick={{ fontSize: 9 }} />
+          <Tooltip
+            formatter={(value) => [value.toLocaleString(), "Count"]}
+            labelFormatter={(label) => `Bin: ${label}`}
+          />
+          <Bar dataKey="count" fill="#3b82f6" radius={[2, 2, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
   );
 }
-
-export default DistributionChart;

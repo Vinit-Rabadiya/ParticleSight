@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAnalysisStatus, useAnalysisResults } from "../hooks/useAnalysis";
 import DistributionChart from "../components/DistributionChart";
 import CorrelationMatrix from "../components/CorrelationMatrix";
@@ -11,6 +11,7 @@ function getFallbackReferenceUrl(columnName) {
 
 function Dashboard() {
   const { analysisId } = useParams();
+  const navigate = useNavigate();
   const { data: statusData } = useAnalysisStatus(analysisId);
   const status = statusData?.status;
   const isCompleted = statusData?.status === "completed";
@@ -19,41 +20,60 @@ function Dashboard() {
     isCompleted,
   );
 
+  // Shared page shell with back button
+  function Shell({ children }) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          ← Back
+        </button>
+        {children}
+      </div>
+    );
+  }
+
   if (status === "failed") {
     return (
-      <div className="mx-auto max-w-3xl rounded-xl border border-red-200 bg-red-50 p-6 text-red-800">
-        <h2 className="text-xl font-semibold">Analysis failed</h2>
-        <p className="mt-2 text-sm">
-          {statusData?.error_message || "The analysis could not complete."}
-        </p>
-      </div>
+      <Shell>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-800">
+          <h2 className="text-xl font-semibold">Analysis failed</h2>
+          <p className="mt-2 text-sm">
+            {statusData?.error_message || "The analysis could not complete."}
+          </p>
+        </div>
+      </Shell>
     );
   }
 
   if (!isCompleted) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-
-        <p className="mt-4 text-lg font-medium animate-pulse">
-          Analysis running...
-        </p>
-
-        <p className="text-gray-500">
-          Status: {statusData?.status ?? "starting"}
-        </p>
-      </div>
+      <Shell>
+        <div className="flex flex-col items-center justify-center py-24">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+          <p className="mt-4 text-lg font-medium animate-pulse">
+            Analysis running...
+          </p>
+          <p className="text-gray-500">
+            Status: {statusData?.status ?? "starting"}
+          </p>
+        </div>
+      </Shell>
     );
   }
 
   if (isCompleted && isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-        <p className="mt-4 text-lg font-medium animate-pulse">
-          Loading analysis results...
-        </p>
-      </div>
+      <Shell>
+        <div className="flex flex-col items-center justify-center py-24">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+          <p className="mt-4 text-lg font-medium animate-pulse">
+            Loading analysis results...
+          </p>
+        </div>
+      </Shell>
     );
   }
 
@@ -134,7 +154,10 @@ function Dashboard() {
     });
 
     return (
-      <div className="space-y-6">
+      <Shell>
+        {/* Page title */}
+        <h1 className="text-2xl font-bold text-gray-900">Analysis Results</h1>
+
         <section className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-900">
           <h2 className="text-base font-semibold">Dataset Overview</h2>
           <p className="mt-2">
@@ -224,7 +247,7 @@ function Dashboard() {
             ))}
           </div>
         </div>
-      </div>
+      </Shell>
     );
   }
 

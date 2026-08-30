@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import client from "../api/client";
 
-//fetches the list of datasets from GET /api/datasets/ and returns them.
-function useDatasets() {
+// Fetches the list of all datasets from GET /api/datasets/
+// Returns { data, isLoading, isError } from TanStack Query
+export function useDatasets() {
   return useQuery({
     queryKey: ["datasets"],
     queryFn: async () => {
@@ -11,5 +12,3 @@ function useDatasets() {
     },
   });
 }
-
-export default useDatasets;

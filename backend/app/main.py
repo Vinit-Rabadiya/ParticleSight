@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import os
 
 from app.database import init_db, RESET_DB_ON_STARTUP
 from app.routers import datasets, analysis, insights
@@ -15,10 +16,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ParticleSight API", version="1.0.0", lifespan=lifespan)
 
+# Build allowed origins: always include localhost for dev,
+# plus any production frontend URL set via FRONTEND_URL env var
+_allowed_origins = ["http://localhost:5173"]
+_frontend_url = os.getenv("FRONTEND_URL", "").strip()
+if _frontend_url:
+    _allowed_origins.append(_frontend_url)
+
 # Allow the React frontend to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://particlesight.vercel.app"],
+    allow_origins=_allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

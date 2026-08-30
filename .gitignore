@@ -36,3 +36,8 @@ dist/
 
 # Project hooks — local dev tooling, not part of the app
 .particlesight/
+
+# AI agent tooling — local only, not part of the app
+.agents/
+.claude/
+skills-lock.json

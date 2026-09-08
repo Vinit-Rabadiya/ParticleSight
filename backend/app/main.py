@@ -17,16 +17,21 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="ParticleSight API", version="1.0.0", lifespan=lifespan)
 
 # Build allowed origins: always include localhost for dev,
-# plus any production frontend URL set via FRONTEND_URL env var
-_allowed_origins = ["http://localhost:5173"]
+# plus any production frontend URL set via FRONTEND_URL env var.
+# Also allow all Vercel preview deployments (*.vercel.app).
+_allowed_origins = [
+    "http://localhost:5173",
+    "https://particle-sight.vercel.app",
+]
 _frontend_url = os.getenv("FRONTEND_URL", "").strip()
-if _frontend_url:
+if _frontend_url and _frontend_url not in _allowed_origins:
     _allowed_origins.append(_frontend_url)
 
 # Allow the React frontend to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
+    allow_origin_regex=r"https://particle-sight.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )

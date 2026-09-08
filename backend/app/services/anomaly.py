@@ -25,32 +25,29 @@ def detect_anomalies(df):
     num_cols = df.select_dtypes(include=[np.number]).dropna()
 
     if num_cols.empty:
-        return []  # No numeric data to analyze
+        return []
 
-    #standardizing the data to have mean=0 and std=1
+    # Sample down to 5,000 rows max for speed on free-tier servers
+    if len(num_cols) > 5000:
+        num_cols = num_cols.sample(n=5000, random_state=42)
+
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(num_cols)
 
-    #fit the Isolation Forest model
-    model = IsolationForest(n_estimators=100, contamination=0.03, random_state=42)
+    # Reduce n_estimators for speed — 50 is sufficient for pattern detection
+    model = IsolationForest(n_estimators=50, contamination=0.03, random_state=42)
     model.fit(scaled_data)
 
-    # predict anomalies -1 for anomaly, 1 for normal
     predictions = model.predict(scaled_data)
-
-    anomaly_scores = model.decision_function(scaled_data)  # can be used to get anomaly scores if needed 
-
-    #getting the indices of the anomalies
+    anomaly_scores = model.decision_function(scaled_data)
     anomaly_indices = np.where(predictions == -1)[0]
 
     dictionary = {
         "anomaly_indices": anomaly_indices[:50].tolist(),
         "anomaly_scores": anomaly_scores.tolist(),
-        "total_events": len(df),
+        "total_events": len(num_cols),
         "total_anomalies": len(anomaly_indices),
-        "anomaly_percentage": round((len(anomaly_indices) / len(df)) * 100, 2),
-
-
+        "anomaly_percentage": round((len(anomaly_indices) / len(num_cols)) * 100, 2),
     }
     most_anomalous_features = _find_anomaly_features(num_cols, anomaly_indices)
     dictionary["most_anomalous_features"] = most_anomalous_features

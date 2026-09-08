@@ -1,5 +1,6 @@
 from pathlib import Path
 from sqlmodel import SQLModel, create_engine, Session
+from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 import os
 
@@ -13,22 +14,31 @@ RESET_DB_ON_STARTUP = os.getenv("RESET_DB_ON_STARTUP", "false").strip().lower() 
 def create_database_engine(database_url: str | None = None):
     if database_url and database_url.startswith("postgresql"):
         try:
-            # Keep local startup responsive when Postgres isn't available.
             engine = create_engine(
                 database_url,
-                echo=True,
-                connect_args={"connect_timeout": 3},
+                # NullPool disables connection pooling entirely.
+                # This is the correct setting for serverless/PaaS environments
+                # where the database (Neon) scales to zero — pooled connections
+                # go stale when Neon suspends, causing 9h9h/7s2a errors.
+                # Each request opens and closes its own fresh connection instead.
+                poolclass=NullPool,
+                echo=False,
+                connect_args={
+                    "connect_timeout": 10,
+                    "sslmode": "require",
+                },
             )
             with engine.connect() as connection:
                 connection.exec_driver_sql("SELECT 1")
+            print("Connected to Neon PostgreSQL successfully.")
             return engine
         except Exception as exc:
-            print(f"Postgres unavailable at {database_url}; falling back to SQLite. {exc}")
+            print(f"Postgres unavailable ({exc}); falling back to SQLite.")
 
     sqlite_url = f"sqlite:///{DB_PATH}"
     return create_engine(
         sqlite_url,
-        echo=True,
+        echo=False,
         connect_args={"check_same_thread": False},
     )
 

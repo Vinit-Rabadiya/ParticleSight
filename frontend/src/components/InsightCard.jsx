@@ -15,6 +15,13 @@ function InsightCard({ insight }) {
     surpriseColor = "bg-yellow-500";
   }
 
+  // The backend sometimes returns explanation as a newline-separated bullet
+  // list (each line starting with "-"), e.g. the "Column Meanings" insight.
+  // Render those as a proper <ul> instead of collapsing them into one
+  // run-on paragraph, which is what plain HTML whitespace handling does.
+  const lines = (explanation || "").split("\n").map((l) => l.trim()).filter(Boolean);
+  const isBulletList = lines.length > 1 && lines.every((l) => l.startsWith("-"));
+
   return (
     <div className="bg-white rounded-xl shadow p-5 border border-gray-100 flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -29,7 +36,15 @@ function InsightCard({ insight }) {
         </span>
       </div>
 
-      <p className="text-gray-700">{explanation}</p>
+      {isBulletList ? (
+        <ul className="text-gray-700 list-disc pl-5 flex flex-col gap-1.5">
+          {lines.map((line, i) => (
+            <li key={i}>{line.replace(/^-\s*/, "")}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-gray-700 whitespace-pre-line">{explanation}</p>
+      )}
 
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium">

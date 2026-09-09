@@ -10,11 +10,12 @@ load_dotenv()
 # Uses llama3.1-8b — fast, free, good enough for plain-English insight generation
 API_KEY = os.getenv("CEREBRAS_API_KEY")
 client = Cerebras(api_key=API_KEY) if API_KEY else None
-# llama-3.3-70b is Cerebras's fastest large model — much quicker than gpt-oss-120b
-PREFERRED_MODEL = os.getenv("CEREBRAS_MODEL", "llama-3.3-70b")
+# qwen-3.8-27b is fast and available on the free tier
+# gpt-oss-120b is the larger fallback
+PREFERRED_MODEL = os.getenv("CEREBRAS_MODEL", "qwen-3.8-27b")
 MODEL_CANDIDATES = [
     PREFERRED_MODEL,
-    "llama3.1-8b",  # fallback — smallest/fastest if 70b fails
+    "gpt-oss-120b",
 ]
 
 

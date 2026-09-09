@@ -10,12 +10,11 @@ load_dotenv()
 # Uses llama3.1-8b — fast, free, good enough for plain-English insight generation
 API_KEY = os.getenv("CEREBRAS_API_KEY")
 client = Cerebras(api_key=API_KEY) if API_KEY else None
-PREFERRED_MODEL = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
+# llama-3.3-70b is Cerebras's fastest large model — much quicker than gpt-oss-120b
+PREFERRED_MODEL = os.getenv("CEREBRAS_MODEL", "llama-3.3-70b")
 MODEL_CANDIDATES = [
     PREFERRED_MODEL,
-    "gpt-oss-120b",
-    "gemma-4-31b",
-    "zai-glm-4.7",
+    "llama3.1-8b",  # fallback — smallest/fastest if 70b fails
 ]
 
 
@@ -357,7 +356,7 @@ finding_type must be one of: correlation, anomaly, distribution, pattern"""
             response = client.chat.completions.create(
                 model=model_name,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=1500
+                max_tokens=900
             )
 
             content = response.choices[0].message.content.strip()

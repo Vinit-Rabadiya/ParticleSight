@@ -2,6 +2,20 @@
 
 > Making CERN's 3,000+ public datasets accessible to everyone — no physics expertise required.
 
+**🔗 Live demo:** [particle-sight.vercel.app](https://particle-sight.vercel.app/)
+**💻 Source code:** [github.com/Vinit-Rabadiya/ParticleSight](https://github.com/Vinit-Rabadiya/ParticleSight)
+
+<!--
+ADD 2–3 SCREENSHOTS OR A SHORT GIF HERE BEFORE POSTING.
+Suggested shots: (1) dataset selection screen, (2) anomaly/correlation charts,
+(3) AI-generated plain-English insight cards.
+Example markdown once you have the images in a /docs or /assets folder:
+
+![Dataset selection](docs/screenshot-1.png)
+![Analysis results](docs/screenshot-2.png)
+![AI insights](docs/screenshot-3.png)
+-->
+
 ---
 
 ## ⚠️ Disclaimer
@@ -12,7 +26,7 @@ ParticleSight is an independent, personal project and is **not affiliated with, 
 
 ## About
 
-Built by a 4th year Computer Science student as a personal data accessibility platform for CERN's publicly released collision datasets.
+Built by a 4th-year Computer Science student as a personal data-accessibility platform for CERN's publicly released collision datasets.
 
 This is not a physics analysis tool — it is a **data platform** designed to make scientific datasets explorable by anyone, regardless of their physics background.
 
@@ -37,31 +51,31 @@ A researcher, student, or curious person can select a CERN dataset, click Analys
 
 ### Backend
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| Python | 3.13 | Core language |
-| FastAPI | 0.115.0 | Async REST API framework |
-| SQLModel | 0.0.21 | ORM combining SQLAlchemy + Pydantic |
-| PostgreSQL | 18.3 | Primary database (runs via Docker) |
-| psycopg | 3.3.4 | PostgreSQL driver (Python 3.13 compatible) |
-| requests | 2.32.3 | HTTP client for downloading CERN CSV files |
-| pandas | 2.2.3 | Data loading and manipulation |
-| numpy | 2.1.3 | Numerical operations |
-| scipy | 1.14.1 | Statistical tests (Spearman correlation, skewness) |
-| scikit-learn | 1.5.2 | Isolation Forest anomaly detection |
-| cerebras-cloud-sdk | 1.67.0 | Llama 3.1 AI for plain-English insights (free) |
+| Tool               | Version | Purpose                                            |
+| ------------------ | ------- | -------------------------------------------------- |
+| Python             | 3.13    | Core language                                      |
+| FastAPI            | 0.115.0 | Async REST API framework                           |
+| SQLModel           | 0.0.21  | ORM combining SQLAlchemy + Pydantic                |
+| PostgreSQL         | 18.3    | Primary database                                   |
+| psycopg            | 3.3.4   | PostgreSQL driver (Python 3.13 compatible)         |
+| requests           | 2.32.3  | HTTP client for downloading CERN CSV files         |
+| pandas             | 2.2.3   | Data loading and manipulation                      |
+| numpy              | 2.1.3   | Numerical operations                               |
+| scipy              | 1.14.1  | Statistical tests (Spearman correlation, skewness) |
+| scikit-learn       | 1.5.2   | Isolation Forest anomaly detection                 |
+| cerebras-cloud-sdk | 1.67.0  | Llama 3.1 AI for plain-English insights (free)     |
 
-### Frontend _(in progress)_
+### Frontend
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| React | 19.x | UI framework |
-| Vite | 6.x | Build tool |
-| TailwindCSS | 4.x | Styling |
-| Recharts | 2.x | Data visualisation charts |
-| TanStack Query | 5.x | Server state and caching |
-| React Router | 7.x | Client-side routing |
-| Axios | 1.x | HTTP client for API calls |
+| Tool           | Version | Purpose                   |
+| -------------- | ------- | ------------------------- |
+| React          | 19.x    | UI framework              |
+| Vite           | 6.x     | Build tool                |
+| TailwindCSS    | 4.x     | Styling                   |
+| Recharts       | 2.x     | Data visualisation charts |
+| TanStack Query | 5.x     | Server state and caching  |
+| React Router   | 7.x     | Client-side routing       |
+| Axios          | 1.x     | HTTP client for API calls |
 
 ---
 
@@ -101,7 +115,7 @@ AI returns 5 plain-English insights as JSON
         ↓
 Everything saved to PostgreSQL (AnalysisResult table)
         ↓
-React frontend renders:  [in progress]
+React frontend renders:
   - Distribution histograms
   - Correlation heatmap
   - Anomaly scatter plot
@@ -112,10 +126,10 @@ React frontend renders:  [in progress]
 
 ## CERN APIs Used
 
-| Purpose | URL |
-|---------|-----|
-| Download dataset CSV | `https://opendata.cern.ch/record/{id}/files/{filename}.csv` |
-| Fetch dataset metadata (DOI, title, experiment, year) | `https://opendata.cern.ch/api/records/{id}` |
+| Purpose                                               | URL                                                         |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| Download dataset CSV                                  | `https://opendata.cern.ch/record/{id}/files/{filename}.csv` |
+| Fetch dataset metadata (DOI, title, experiment, year) | `https://opendata.cern.ch/api/records/{id}`                 |
 
 All analysis runs locally on the backend. No data is sent back to CERN.
 
@@ -144,16 +158,16 @@ Spearman correlation across all numeric column pairs with p-value significance t
 
 ## API Endpoints
 
-| Method | Endpoint | What it does |
-|--------|----------|-------------|
-| GET | `/api/datasets/` | List all datasets |
-| POST | `/api/datasets/` | Add a dataset (auto-fetches DOI from CERN) |
-| GET | `/api/datasets/{id}` | Get one dataset |
-| POST | `/api/analysis/` | Trigger analysis for a dataset |
-| GET | `/api/analysis/{id}` | Check analysis status |
-| GET | `/api/analysis/{id}/results` | Get full results |
+| Method | Endpoint                     | What it does                               |
+| ------ | ----------------------------- | ------------------------------------------- |
+| GET    | `/api/datasets/`             | List all datasets                          |
+| POST   | `/api/datasets/`             | Add a dataset (auto-fetches DOI from CERN) |
+| GET    | `/api/datasets/{id}`         | Get one dataset                            |
+| POST   | `/api/analysis/`             | Trigger analysis for a dataset             |
+| GET    | `/api/analysis/{id}`         | Check analysis status                      |
+| GET    | `/api/analysis/{id}/results` | Get full results                           |
 
-Visit **http://localhost:8000/docs** for interactive API documentation.
+Visit **<http://localhost:8000/docs>** for interactive API documentation (when running locally).
 
 ---
 
@@ -184,15 +198,15 @@ particlesight/
 │   ├── src/
 │   │   ├── api/
 │   │   │   └── client.js        # Axios instance pointing to backend
-│   │   ├── hooks/               # TanStack Query hooks (in progress)
-│   │   ├── pages/               # Route-level components (in progress)
-│   │   ├── components/          # Reusable UI components (in progress)
+│   │   ├── hooks/               # TanStack Query hooks
+│   │   ├── pages/               # Route-level components
+│   │   ├── components/          # Reusable UI components
 │   │   ├── App.jsx              # Route definitions
 │   │   ├── main.jsx             # App entry — QueryClient + BrowserRouter
 │   │   └── index.css            # Tailwind import
 │   ├── vite.config.js           # Vite + Tailwind plugin config
 │   └── package.json
-├── docker-compose.yml           # PostgreSQL 18.3 container
+├── docker-compose.yml           # PostgreSQL container (local dev)
 └── README.md
 ```
 
@@ -204,11 +218,11 @@ particlesight/
 
 - Python 3.13+
 - Docker Desktop
-- Node.js 20+ (for frontend, when ready)
+- Node.js 20+
 
 ### Backend
 
-```bash
+```
 # 1. Start PostgreSQL
 docker compose up -d
 
@@ -227,7 +241,15 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Visit [http://localhost:8000/docs](http://localhost:8000/docs) for interactive API docs.
+Visit <http://localhost:8000/docs> for interactive API docs.
+
+### Frontend
+
+```
+cd frontend
+npm install
+npm run dev
+```
 
 ---
 
@@ -243,39 +265,41 @@ SECRET_KEY=any_random_string
 
 > ⚠️ **Important:** Do not commit `.env` to GitHub. It is listed in `.gitignore`.
 
-Get a free Cerebras API key at [https://cloud.cerebras.ai](https://cloud.cerebras.ai) — no credit card needed. Free tier: 1M tokens/day.
+Get a free Cerebras API key at <https://cloud.cerebras.ai> — no credit card needed. Free tier: 1M tokens/day.
 
 ---
 
-## Deployment _(planned)_
+## Deployment
 
-| Service | Platform | Cost |
-|---------|----------|------|
-| Frontend | Vercel | Free |
-| Backend | Render | Free |
-| Database | Neon (cloud PostgreSQL) | Free |
+| Service  | Platform                | Status     |
+| -------- | ------------------------ | ---------- |
+| Frontend | Vercel                  | ✅ Live     |
+| Backend  | Render                  | <!-- ✅ Live / 🔄 In progress — update this --> |
+| Database | Neon (cloud PostgreSQL) | <!-- ✅ Live / 🔄 In progress — update this --> |
 
-Total hosting cost: **$0**
+**Live URL:** <https://particle-sight.vercel.app/>
 
 ---
 
 ## Current Status
 
-| Component | Status |
-|-----------|--------|
-| CERN data fetching (CSV + DOI metadata) | ✅ Complete |
-| Distribution profiling (profiler.py) | ✅ Complete |
-| Correlation discovery (correlation.py) | ✅ Complete |
-| Anomaly detection — Isolation Forest | ✅ Complete |
-| AI insights — Cerebras Llama 3.1 | ✅ Complete |
-| Master analysis pipeline (analyser.py) | ✅ Complete |
-| FastAPI routers (datasets + analysis + insights) | ✅ Complete |
-| PostgreSQL integration | ✅ Complete |
-| Full backend tested end-to-end | ✅ Complete |
-| React + Vite + Tailwind setup | ✅ Complete |
-| Axios client + TanStack Query + React Router setup | ✅ Complete |
-| React pages and components | 🔄 In progress |
-| Deployment | ⬜ Not started |
+<!-- Confirm each row reflects reality before posting publicly. -->
+
+| Component                                          | Status     |
+| ---------------------------------------------------- | ---------- |
+| CERN data fetching (CSV + DOI metadata)             | ✅ Complete |
+| Distribution profiling (profiler.py)                | ✅ Complete |
+| Correlation discovery (correlation.py)              | ✅ Complete |
+| Anomaly detection — Isolation Forest                | ✅ Complete |
+| AI insights — Cerebras Llama 3.1                    | ✅ Complete |
+| Master analysis pipeline (analyser.py)              | ✅ Complete |
+| FastAPI routers (datasets + analysis + insights)    | ✅ Complete |
+| PostgreSQL integration                              | ✅ Complete |
+| Full backend tested end-to-end                      | ✅ Complete |
+| React + Vite + Tailwind setup                       | ✅ Complete |
+| Axios client + TanStack Query + React Router setup  | ✅ Complete |
+| React pages and components                          | ✅ Complete |
+| Deployment (Frontend + Backend)                     | ✅ Live     |
 
 ---
 
@@ -283,8 +307,8 @@ Total hosting cost: **$0**
 
 All datasets are sourced from the [CERN Open Data Portal](https://opendata.cern.ch/) under the [Creative Commons CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) waiver.
 
-| Dataset | Record |
-|---------|--------|
+| Dataset                    | Record                                                             |
+| --------------------------- | -------------------------------------------------------------------- |
 | CMS Dimuon Events Run2010B | [opendata.cern.ch/record/700](https://opendata.cern.ch/record/700) |
 | CMS Run 2011A Multi-Lepton | [opendata.cern.ch/record/545](https://opendata.cern.ch/record/545) |
 
@@ -292,10 +316,14 @@ DOIs are fetched automatically from the CERN API and stored in the database.
 
 ---
 
+## Feedback & Contributions
+
+This project is actively being refined — bug reports, UX feedback, and suggestions are very welcome. Feel free to open an [issue](https://github.com/Vinit-Rabadiya/ParticleSight/issues) or reach out directly.
+
+---
+
 ## License
 
-© 2026 ParticleSight. All rights reserved.
-
-This project is currently unlicensed. No permission is granted to copy, modify, distribute, or use this code without explicit written permission from the author.
+This project is licensed under the [MIT License](LICENSE) — feel free to explore, learn from, and build on it. Attribution appreciated.
 
 CERN Open Data used by this project is released under the [Creative Commons CC0 1.0 Universal (CC0 1.0) Public Domain Dedication](https://creativecommons.org/publicdomain/zero/1.0/).

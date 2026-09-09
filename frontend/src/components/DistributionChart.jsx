@@ -34,7 +34,7 @@ export default function DistributionChart({ columnName, data, isUnusual }) {
       <ResponsiveContainer width="100%" height={150}>
         <BarChart
           data={chartData}
-          margin={{ top: 4, right: 10, left: 10, bottom: 30 }}
+          margin={{ top: 4, right: 10, left: 28, bottom: 30 }}
         >
           <XAxis
             dataKey="bin"
@@ -48,13 +48,13 @@ export default function DistributionChart({ columnName, data, isUnusual }) {
               style={{ fontSize: 10, fill: "#6b7280" }}
             />
           </XAxis>
-          <YAxis tick={{ fontSize: 9 }}>
+          <YAxis tick={{ fontSize: 9 }} width={48}>
             <Label
               value="Event count"
               angle={-90}
               position="insideLeft"
-              offset={10}
-              style={{ fontSize: 10, fill: "#6b7280" }}
+              offset={-8}
+              style={{ fontSize: 10, fill: "#6b7280", textAnchor: "middle" }}
             />
           </YAxis>
           <Tooltip

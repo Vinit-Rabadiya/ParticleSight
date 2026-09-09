@@ -102,7 +102,7 @@ export default function AnomalyScatterPlot({ anomalyData }) {
       </p>
 
       <ResponsiveContainer width="100%" height={300}>
-        <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 40 }}>
+        <ScatterChart margin={{ top: 10, right: 20, left: 32, bottom: 40 }}>
           <XAxis dataKey="index" name="Event" type="number" tick={{ fontSize: 10 }}>
             <Label
               value="Event index (position in dataset)"
@@ -111,13 +111,13 @@ export default function AnomalyScatterPlot({ anomalyData }) {
               style={{ fontSize: 10, fill: "#6b7280" }}
             />
           </XAxis>
-          <YAxis dataKey="score" name="Score" type="number" tick={{ fontSize: 10 }}>
+          <YAxis dataKey="score" name="Score" type="number" tick={{ fontSize: 10 }} width={56}>
             <Label
               value="Anomaly score (−1 = most anomalous)"
               angle={-90}
               position="insideLeft"
-              offset={20}
-              style={{ fontSize: 10, fill: "#6b7280" }}
+              offset={-14}
+              style={{ fontSize: 10, fill: "#6b7280", textAnchor: "middle" }}
             />
           </YAxis>
           <Tooltip

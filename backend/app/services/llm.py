@@ -6,167 +6,174 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Create the Cerebras client
-# Uses llama3.1-8b — fast, free, good enough for plain-English insight generation
 API_KEY = os.getenv("CEREBRAS_API_KEY")
 client = Cerebras(api_key=API_KEY) if API_KEY else None
-# qwen-3.8-27b is fast and available on the free tier
-# gpt-oss-120b is the larger fallback
+
+# qwen-3.8-27b — fast, free tier, good quality
+# gpt-oss-120b — larger fallback
 PREFERRED_MODEL = os.getenv("CEREBRAS_MODEL", "qwen-3.8-27b")
-MODEL_CANDIDATES = [
-    PREFERRED_MODEL,
-    "gpt-oss-120b",
-]
+MODEL_CANDIDATES = [PREFERRED_MODEL, "gpt-oss-120b"]
+
+# Known physics column definitions used as fallback when the LLM is unavailable
+KNOWN_COLUMNS = {
+    "run":     ("Run number — identifies the LHC data-taking period", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "event":   ("Event number — unique identifier for each recorded collision", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "type":    ("Particle type label (e.g. muon pair or electron pair)", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "e":       ("Total energy of the particle in GeV", "https://pdg.lbl.gov/"),
+    "e1":      ("Energy of the first particle in GeV", "https://pdg.lbl.gov/"),
+    "e2":      ("Energy of the second particle in GeV", "https://pdg.lbl.gov/"),
+    "px":      ("Momentum component along the x-axis in GeV/c", "https://pdg.lbl.gov/"),
+    "py":      ("Momentum component along the y-axis in GeV/c", "https://pdg.lbl.gov/"),
+    "pz":      ("Momentum component along the z-axis (beam direction) in GeV/c", "https://pdg.lbl.gov/"),
+    "px1":     ("x-momentum of the first particle in GeV/c", "https://pdg.lbl.gov/"),
+    "py1":     ("y-momentum of the first particle in GeV/c", "https://pdg.lbl.gov/"),
+    "pz1":     ("z-momentum of the first particle in GeV/c", "https://pdg.lbl.gov/"),
+    "px2":     ("x-momentum of the second particle in GeV/c", "https://pdg.lbl.gov/"),
+    "py2":     ("y-momentum of the second particle in GeV/c", "https://pdg.lbl.gov/"),
+    "pz2":     ("z-momentum of the second particle in GeV/c", "https://pdg.lbl.gov/"),
+    "pt":      ("Transverse momentum — momentum perpendicular to the beam axis in GeV/c", "https://pdg.lbl.gov/"),
+    "pt1":     ("Transverse momentum of the first particle in GeV/c", "https://pdg.lbl.gov/"),
+    "pt2":     ("Transverse momentum of the second particle in GeV/c", "https://pdg.lbl.gov/"),
+    "eta":     ("Pseudorapidity — describes the angle of the particle relative to the beam (0 = perpendicular, ±∞ = beam direction)", "https://pdg.lbl.gov/"),
+    "eta1":    ("Pseudorapidity of the first particle", "https://pdg.lbl.gov/"),
+    "eta2":    ("Pseudorapidity of the second particle", "https://pdg.lbl.gov/"),
+    "phi":     ("Azimuthal angle of the particle around the beam axis in radians", "https://pdg.lbl.gov/"),
+    "phi1":    ("Azimuthal angle of the first particle in radians", "https://pdg.lbl.gov/"),
+    "phi2":    ("Azimuthal angle of the second particle in radians", "https://pdg.lbl.gov/"),
+    "q":       ("Electric charge of the particle (+1 or −1)", "https://pdg.lbl.gov/"),
+    "q1":      ("Electric charge of the first particle", "https://pdg.lbl.gov/"),
+    "q2":      ("Electric charge of the second particle", "https://pdg.lbl.gov/"),
+    "m":       ("Invariant mass of the particle or system in GeV/c²", "https://pdg.lbl.gov/"),
+    "m1":      ("Invariant mass of the first particle in GeV/c²", "https://pdg.lbl.gov/"),
+    "m2":      ("Invariant mass of the second particle in GeV/c²", "https://pdg.lbl.gov/"),
+    "minv":    ("Invariant mass of the two-particle system in GeV/c² — used to identify resonances like Z or Higgs", "https://pdg.lbl.gov/"),
+    "chisq":   ("Chi-squared fit quality of the track reconstruction — lower is better", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "chisq1":  ("Track fit chi-squared for the first particle", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "chisq2":  ("Track fit chi-squared for the second particle", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "dxy":     ("Transverse impact parameter — distance from the beam axis in cm; large values suggest secondary vertices", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "dxy1":    ("Transverse impact parameter of the first particle in cm", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "dxy2":    ("Transverse impact parameter of the second particle in cm", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "iso":     ("Isolation — how much energy surrounds the particle; low values mean the particle is well-isolated", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "iso1":    ("Isolation of the first particle", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "iso2":    ("Isolation of the second particle", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "met":     ("Missing transverse energy in GeV — energy imbalance suggesting invisible particles like neutrinos", "https://pdg.lbl.gov/"),
+    "phimet":  ("Azimuthal angle of the missing transverse energy vector in radians", "https://pdg.lbl.gov/"),
+    "x":       ("x position in the detector in cm", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "y":       ("y position in the detector in cm", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+    "z":       ("z position along the beam axis in cm", "https://opendata.cern.ch/docs/cms-guide-for-research"),
+}
+
+
+def _column_meaning_fallback(col: str) -> tuple[str, str]:
+    """Return (meaning, url) for a column using the known definitions table."""
+    key = col.lower().replace(" ", "").replace("_", "").replace("-", "")
+    if key in KNOWN_COLUMNS:
+        return KNOWN_COLUMNS[key]
+    return (
+        f"Numeric quantity recorded per event — check the dataset documentation for the exact definition of '{col}'",
+        f"https://opendata.cern.ch/search?q={col}",
+    )
+
+
+def _build_column_meanings_fallback(columns: list) -> str:
+    lines = []
+    for col in columns[:20]:
+        meaning, url = _column_meaning_fallback(col)
+        lines.append(f"- {col}: {meaning}. Source: {url}")
+    return "\n".join(lines)
 
 
 def _local_fallback_insights(analysis_data: dict, dataset_name: str, reason: str) -> list:
-    """Generate useful deterministic insights when remote AI is unavailable."""
+    """Deterministic insights when the AI API is unavailable."""
     insights = []
-
     top_correlations = analysis_data.get("top_correlations", [])
     anomaly_summary = analysis_data.get("anomaly_summary", {})
     distributions = analysis_data.get("distributions", {})
     columns = list(distributions.keys())
+    preview_columns = ", ".join(columns[:8]) if columns else "none detected"
 
-    preview_columns = ", ".join(columns[:8]) if columns else "no numeric columns detected"
-
-    insights.append(
-        {
-            "title": "Dataset At A Glance",
-            "explanation": (
-                f"{dataset_name} contains {anomaly_summary.get('total_events', 0)} events with "
-                f"{len(distributions)} numeric features profiled for patterns, anomalies, and correlations. "
-                f"Examples of columns: {preview_columns}."
-            ),
-            "surprise_level": 2,
-            "finding_type": "pattern",
-        }
-    )
+    insights.append({
+        "title": "Dataset At A Glance",
+        "explanation": (
+            f"{dataset_name} contains {anomaly_summary.get('total_events', 0):,} events "
+            f"with {len(distributions)} numeric columns. "
+            f"Columns present: {preview_columns}."
+        ),
+        "surprise_level": 2,
+        "finding_type": "pattern",
+    })
 
     if columns:
-        column_meaning_lines = []
-        for column_name in columns[:20]:
-            ref_url = f"https://opendata.cern.ch/search?q={column_name}"
-            column_meaning_lines.append(
-                f"- {column_name}: Physics meaning unavailable in local fallback mode. Source: {ref_url}"
-            )
-
-        insights.append(
-            {
-                "title": "Column Meanings",
-                "explanation": "\n".join(column_meaning_lines),
-                "surprise_level": 1,
-                "finding_type": "pattern",
-            }
-        )
-
-        insights.append(
-            {
-                "title": "Column Guide",
-                "explanation": (
-                    "Column names are interpreted from the data itself. "
-                    f"Start with these fields: {preview_columns}. "
-                    "Use min/mean/max patterns and correlations to understand each column's role."
-                ),
-                "surprise_level": 2,
-                "finding_type": "pattern",
-            }
-        )
+        insights.append({
+            "title": "Column Meanings",
+            "explanation": _build_column_meanings_fallback(columns),
+            "surprise_level": 1,
+            "finding_type": "pattern",
+        })
 
     if top_correlations:
         strongest = top_correlations[0]
-        corr_value = strongest.get("correlation", 0)
-        direction = strongest.get("direction", "unknown")
-        insights.append(
-            {
-                "title": "Strongest Relationship Found",
-                "explanation": (
-                    f"In {dataset_name}, the strongest relationship is between "
-                    f"{strongest.get('variable_1', 'N/A')} and {strongest.get('variable_2', 'N/A')} "
-                    f"with correlation {corr_value:.2f} ({direction})."
-                ),
-                "surprise_level": 6 if abs(corr_value) >= 0.8 else 4,
-                "finding_type": "correlation",
-            }
-        )
+        r = strongest.get("correlation", 0)
+        insights.append({
+            "title": "Strongest Correlation",
+            "explanation": (
+                f"The strongest relationship is between {strongest.get('variable_1')} and "
+                f"{strongest.get('variable_2')} (r = {r:.3f}, {strongest.get('direction')}). "
+                f"This is a {strongest.get('strength')} correlation."
+            ),
+            "surprise_level": 6 if abs(r) >= 0.8 else 4,
+            "finding_type": "correlation",
+        })
 
-    total_events = anomaly_summary.get("total_events", 0)
-    anomaly_pct = anomaly_summary.get("anomaly_percentage", 0)
-    if total_events:
-        insights.append(
-            {
-                "title": "Anomaly Rate Overview",
-                "explanation": (
-                    f"The anomaly detector flagged {anomaly_summary.get('total_anomalies', 0)} out of "
-                    f"{total_events} events ({anomaly_pct}%)."
-                ),
-                "surprise_level": 7 if anomaly_pct >= 5 else 3,
-                "finding_type": "anomaly",
-            }
-        )
+    total = anomaly_summary.get("total_events", 0)
+    pct = anomaly_summary.get("anomaly_percentage", 0)
+    if total:
+        insights.append({
+            "title": "Anomaly Rate",
+            "explanation": (
+                f"{anomaly_summary.get('total_anomalies', 0):,} of {total:,} events ({pct}%) "
+                f"were flagged as anomalous by Isolation Forest."
+            ),
+            "surprise_level": 7 if pct >= 5 else 3,
+            "finding_type": "anomaly",
+        })
 
-    unusual_columns = [col for col, stats in distributions.items() if stats.get("is_unusual")]
-    if unusual_columns:
-        sample = ", ".join(unusual_columns[:3])
-        insights.append(
-            {
-                "title": "Skewed Distributions Detected",
-                "explanation": (
-                    f"The data shows unusually skewed distributions in {len(unusual_columns)} columns"
-                    f" (for example: {sample})."
-                ),
-                "surprise_level": 5,
-                "finding_type": "distribution",
-            }
-        )
-
-    top_features = anomaly_summary.get("most_anomalous_features", [])
-    if top_features:
-        first = top_features[0]
-        insights.append(
-            {
-                "title": "Top Driver Behind Anomalies",
-                "explanation": (
-                    f"The feature {first.get('feature', 'N/A')} shows the largest mean shift between "
-                    f"normal and anomalous events (difference {first.get('difference', 'N/A')})."
-                ),
-                "surprise_level": 6,
-                "finding_type": "pattern",
-            }
-        )
+    unusual = [c for c, s in distributions.items() if s.get("is_unusual")]
+    if unusual:
+        insights.append({
+            "title": "Unusual Distributions",
+            "explanation": (
+                f"{len(unusual)} column(s) have highly skewed distributions: "
+                f"{', '.join(unusual[:4])}. This is common in particle physics where most "
+                f"events cluster near zero but rare high-energy events create long tails."
+            ),
+            "surprise_level": 5,
+            "finding_type": "distribution",
+        })
 
     return insights[:5]
 
 
-def _build_column_summaries(distributions: dict, limit: int = 25) -> list:
+def _build_column_summaries(distributions: dict, limit: int = 15) -> list:
     summaries = []
-    for column_name, stats in list(distributions.items())[:limit]:
-        summaries.append(
-            {
-                "column": column_name,
-                "mean": stats.get("mean"),
-                "median": stats.get("median"),
-                "min": stats.get("min"),
-                "max": stats.get("max"),
-                "std_dev": stats.get("std_dev"),
-                "missing_values": stats.get("missing_values"),
-                "is_unusual": stats.get("is_unusual"),
-            }
-        )
+    for col, stats in list(distributions.items())[:limit]:
+        summaries.append({
+            "column": col,
+            "mean": stats.get("mean"),
+            "min": stats.get("min"),
+            "max": stats.get("max"),
+            "is_unusual": stats.get("is_unusual"),
+        })
     return summaries
 
 
 def _parse_model_json_array(content: str):
-    """Best-effort parse for model output that should contain a JSON array."""
     text = (content or "").strip()
     if not text:
         raise json.JSONDecodeError("Empty model response", text, 0)
-
     if text.startswith("```"):
         lines = text.split("\n")
         text = "\n".join(lines[1:-1]).strip()
-
-    # First try direct parse
     parsed = json.loads(text)
     if isinstance(parsed, list):
         return parsed
@@ -174,213 +181,148 @@ def _parse_model_json_array(content: str):
 
 
 def _parse_model_json_array_best_effort(content: str):
-    """Parse JSON array even when the model adds extra prefix/suffix text."""
     try:
         return _parse_model_json_array(content)
     except json.JSONDecodeError:
         pass
-
     text = (content or "").strip()
     match = re.search(r"\[\s*\{[\s\S]*\}\s*\]", text)
     if match:
         return _parse_model_json_array(match.group(0))
-
     raise json.JSONDecodeError("No JSON array found in model response", text, 0)
 
 
 def _extract_bullet_lines(text: str) -> list:
-    lines = []
-    for line in (text or "").split("\n"):
-        cleaned = line.strip()
-        if cleaned.startswith("-"):
-            lines.append(cleaned)
-    return lines
+    return [l.strip() for l in (text or "").split("\n") if l.strip().startswith("-")]
 
 
-def _find_column_meanings_insight(insights: list):
-    for insight in insights:
-        title = str(insight.get("title", "")).lower()
-        if "column meanings" in title:
-            return insight
-
-    for insight in insights:
-        explanation = str(insight.get("explanation", ""))
-        bullets = _extract_bullet_lines(explanation)
-        if bullets and any("source:" in b.lower() for b in bullets):
-            return insight
-
-    return None
-
-
-def _generate_column_meanings_text(model_name: str, dataset_name: str, distributions: dict):
-    columns = list(distributions.keys())[:20]
-    if not columns:
-        return ""
-
-    prompt = f"""You are a particle-physics explainer.
-
-Dataset: {dataset_name}
-Columns: {columns}
-
-Return ONLY bullet lines, one per column, in this exact format:
-- <column>: <physics meaning>. Source: <url>
-
-Rules:
-1) Explain likely physics meaning in plain English.
-2) Include likely units when appropriate.
-3) Each line must include one source URL.
-4) No JSON, no markdown fences, no extra text.
-"""
-
+def _call_llm(model_name: str, prompt: str, max_tokens: int) -> str:
+    """Single LLM call — raises on failure."""
     response = client.chat.completions.create(
         model=model_name,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1200,
+        max_tokens=max_tokens,
     )
-    content = response.choices[0].message.content.strip()
-    bullet_lines = _extract_bullet_lines(content)
-    if not bullet_lines:
+    return response.choices[0].message.content.strip()
+
+
+def _generate_column_meanings(dataset_name: str, columns: list) -> str:
+    """
+    Dedicated LLM call just for column meanings.
+    Runs separately from the main insights call so it has its own token budget.
+    Falls back to the KNOWN_COLUMNS table if the LLM fails.
+    """
+    if not columns:
         return ""
-    return "\n".join(bullet_lines[:20])
 
+    prompt = f"""You are a particle-physics expert writing for general users.
 
-def _ensure_column_meanings_insight(
-    insights: list,
-    model_name: str,
-    dataset_name: str,
-    distributions: dict,
-) -> list:
-    if not isinstance(insights, list):
-        return insights
+Dataset: {dataset_name}
+Column names: {columns}
 
-    existing = _find_column_meanings_insight(insights)
-    if existing:
-        existing["title"] = "Column Meanings"
-        return insights
+For each column write exactly one bullet line in this format:
+- <column>: <plain-English physics meaning, include units if applicable>. Source: <authoritative URL>
 
-    try:
-        explanation = _generate_column_meanings_text(model_name, dataset_name, distributions)
-    except Exception:
-        return insights
+Use these source URLs when relevant:
+- PDG (particle properties): https://pdg.lbl.gov/
+- CMS detector/reconstruction: https://opendata.cern.ch/docs/cms-guide-for-research
+- CERN Open Data portal: https://opendata.cern.ch/
 
-    if not explanation:
-        return insights
+Rules:
+- One line per column, no extra text
+- No JSON, no markdown fences
+- If unsure, say "likely" instead of stating as fact
+"""
 
-    new_item = {
-        "title": "Column Meanings",
-        "explanation": explanation,
-        "surprise_level": 4,
-        "finding_type": "pattern",
-    }
+    last_err = None
+    for model in MODEL_CANDIDATES:
+        try:
+            content = _call_llm(model, prompt, max_tokens=1500)
+            lines = _extract_bullet_lines(content)
+            if lines:
+                return "\n".join(lines[:20])
+        except Exception as e:
+            last_err = e
+            continue
 
-    if len(insights) >= 5:
-        replace_index = None
-        for idx, item in enumerate(insights):
-            if "column guide" in str(item.get("title", "")).lower():
-                replace_index = idx
-                break
-        if replace_index is None:
-            replace_index = len(insights) - 1
-        insights[replace_index] = new_item
-        return insights
+    # LLM failed — use the known definitions table
+    print(f"Column meanings LLM failed ({last_err}), using known definitions table.")
+    return _build_column_meanings_fallback(columns)
 
-    insights.append(new_item)
-    return insights
 
 def generate_insights(analysis_data: dict, dataset_name: str) -> list:
-    """
-    Sends analysis results to Cerebras and returns
-    5 plain-English insights as a list of dicts.
-    analysis_data must have keys: distributions, top_correlations, anomaly_summary
-    """
-    # Pull out the parts we need for the prompt
-    top_correlations = json.dumps(analysis_data.get("top_correlations", []), indent=2)
-    anomaly_summary = analysis_data.get("anomaly_summary", {})
     distributions = analysis_data.get("distributions", {})
+    top_correlations = analysis_data.get("top_correlations", [])
+    anomaly_summary = analysis_data.get("anomaly_summary", {})
+    columns = list(distributions.keys())
+
+    if client is None:
+        print("No Cerebras API key — using local fallback.")
+        return _local_fallback_insights(analysis_data, dataset_name, "missing API key")
+
+    unusual_columns = [c for c, s in distributions.items() if s.get("is_unusual")]
     column_summaries = json.dumps(_build_column_summaries(distributions), indent=2)
 
-    # Find which columns were flagged as unusual (skewness > 2.0)
-    unusual_columns = [col for col, stats in distributions.items() if stats.get("is_unusual")]
-
-    # Build the prompt
-    prompt = f"""You are a data analyst explaining results to non-experts.
+    # ── Step 1: Generate the 4 statistical insights (no Column Meanings here) ──
+    insights_prompt = f"""You are a data analyst explaining particle-physics results to non-experts.
 
 Dataset: {dataset_name}
 
-Here are the automated statistical findings:
-
-COLUMN SUMMARIES (name + descriptive stats):
+COLUMN SUMMARIES:
 {column_summaries}
 
 TOP CORRELATIONS:
-{top_correlations}
+{json.dumps(top_correlations[:5], indent=2)}
 
 ANOMALY DETECTION:
-- Total events: {anomaly_summary.get("total_events", 0)}
+- Total events: {anomaly_summary.get("total_events", 0):,}
 - Anomalies found: {anomaly_summary.get("total_anomalies", 0)} ({anomaly_summary.get("anomaly_percentage", 0)}%)
-- Features most different in anomalies: {anomaly_summary.get("most_anomalous_features", [])}
+- Top anomalous features: {[f.get("feature") for f in anomaly_summary.get("most_anomalous_features", [])[:3]]}
 
-UNUSUAL DISTRIBUTIONS (highly skewed columns):
-{unusual_columns}
+UNUSUAL DISTRIBUTIONS: {unusual_columns}
 
-Generate exactly 5 insights from this data. Each insight must:
-1. Be written in plain English for general users
-2. Explain what was found and why it is interesting
-3. Be specific — mention actual variable names and numbers
-4. Have a surprise_level from 1 (expected) to 10 (very surprising)
-5. Include at least one dataset-overview insight that explains what the dataset appears to contain
-6. Include at least one column-guide insight that explains what important columns likely represent
-7. Include one insight with title exactly "Column Meanings" and explanation formatted as bullet points, one line per column in this exact format: "- <column>: <physics meaning>. Source: <url>"
-8. For "Column Meanings", explain each variable in particle-physics terms (kinematics, detector, or reconstruction context), and include likely units only when appropriate (for example GeV, radians)
-9. For each column bullet, include one authoritative reference URL for the exact definition (prefer CERN Open Data docs, experiment docs, PDG, or other trusted HEP references)
-10. If uncertain, use language like "likely" or "probably" instead of presenting guesses as facts
+Generate exactly 4 insights. Each must:
+1. Be plain English for non-experts
+2. Mention specific variable names and numbers
+3. Have a surprise_level from 1 to 10
+4. Include one insight titled "Dataset At A Glance" explaining what this dataset contains and what physics it studies
 
-Return ONLY a valid JSON array. No extra text, no markdown, no code fences.
+Return ONLY a valid JSON array, no extra text:
 [
   {{
-    "title": "Short title here",
-    "explanation": "Full plain-English explanation here",
-    "surprise_level": 7,
+    "title": "...",
+    "explanation": "...",
+    "surprise_level": 5,
     "finding_type": "correlation"
   }}
 ]
 
 finding_type must be one of: correlation, anomaly, distribution, pattern"""
 
-    if client is None:
-        print("Cerebras API key not set; using local fallback insights.")
-        return _local_fallback_insights(analysis_data, dataset_name, "missing CEREBRAS_API_KEY")
-
+    insights = None
     last_error = None
-    for model_name in MODEL_CANDIDATES:
+    for model in MODEL_CANDIDATES:
         try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=900
-            )
-
-            content = response.choices[0].message.content.strip()
-
-            try:
-                parsed = _parse_model_json_array_best_effort(content)
-                parsed = _ensure_column_meanings_insight(
-                    parsed,
-                    model_name,
-                    dataset_name,
-                    distributions,
-                )
-                return parsed
-            except json.JSONDecodeError as parse_error:
-                last_error = parse_error
-                continue
-        except Exception as exc:
-            last_error = exc
+            content = _call_llm(model, insights_prompt, max_tokens=1200)
+            insights = _parse_model_json_array_best_effort(content)
+            if isinstance(insights, list) and len(insights) > 0:
+                break
+        except Exception as e:
+            last_error = e
             continue
 
-    print(f"Cerebras API Error: {last_error}")
-    return _local_fallback_insights(
-        analysis_data,
-        dataset_name,
-        f"AI API request failed: {last_error}",
-    )
+    if not insights:
+        print(f"Insights LLM failed: {last_error} — using local fallback.")
+        return _local_fallback_insights(analysis_data, dataset_name, str(last_error))
+
+    # ── Step 2: Generate Column Meanings as a separate dedicated call ──
+    column_meanings_text = _generate_column_meanings(dataset_name, columns)
+    if column_meanings_text:
+        insights.append({
+            "title": "Column Meanings",
+            "explanation": column_meanings_text,
+            "surprise_level": 1,
+            "finding_type": "pattern",
+        })
+
+    return insights[:5]

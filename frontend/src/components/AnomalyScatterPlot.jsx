@@ -8,8 +8,44 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// Shows a scatter plot of anomaly scores — blue = normal, red = anomaly
-// Props: anomalyData (anomaly_summary object from API)
+// Custom tooltip — shows anomaly reason for red points, basic info for blue
+function AnomalyTooltip({ active, payload, pointExplanations }) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload;
+  if (!point) return null;
+
+  const explanation = pointExplanations?.[point.index];
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs max-w-xs">
+      <p className="font-semibold text-gray-700 mb-1">
+        Event #{point.index}
+      </p>
+      <p className="text-gray-500 mb-2">
+        Anomaly score: <span className="font-medium text-red-600">{point.score}</span>
+      </p>
+
+      {explanation ? (
+        <div>
+          <p className="font-medium text-red-700 mb-1">Why it was flagged:</p>
+          {explanation.map((d, i) => (
+            <div key={i} className="mb-1 border-t border-gray-100 pt-1">
+              <span className="font-medium text-gray-800">{d.feature}</span>
+              {" = "}{d.value}
+              <span className={`ml-1 font-medium ${d.direction === "high" ? "text-red-500" : "text-blue-500"}`}>
+                ({d.direction}, {d.z_score}σ from normal)
+              </span>
+              <div className="text-gray-400">Normal avg: {d.normal_mean}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-400 italic">Normal event</p>
+      )}
+    </div>
+  );
+}
+
 export default function AnomalyScatterPlot({ anomalyData }) {
   const {
     anomaly_scores,
@@ -17,9 +53,9 @@ export default function AnomalyScatterPlot({ anomalyData }) {
     total_events,
     total_anomalies,
     anomaly_percentage,
+    point_explanations,
   } = anomalyData;
 
-  // Build a Set for fast anomaly lookup
   const anomalySet = new Set(anomaly_indices);
 
   // Sample every 10th point — 10,000 dots is too many for the browser
@@ -39,7 +75,7 @@ export default function AnomalyScatterPlot({ anomalyData }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
       {/* Header + stats */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-1">
         <h3 className="text-base font-semibold text-gray-800">
           Anomaly Detection
         </h3>
@@ -51,6 +87,12 @@ export default function AnomalyScatterPlot({ anomalyData }) {
           {total_events.toLocaleString()} events
         </div>
       </div>
+
+      {/* Explanation hint */}
+      <p className="text-xs text-gray-400 mb-4">
+        Hover a <span className="text-red-500 font-medium">red point</span> to see which features made it anomalous.
+        Score closer to <span className="font-medium">−1</span> = more anomalous.
+      </p>
 
       {/* Scatter chart */}
       <ResponsiveContainer width="100%" height={280}>
@@ -71,7 +113,7 @@ export default function AnomalyScatterPlot({ anomalyData }) {
           />
           <Tooltip
             cursor={{ strokeDasharray: "3 3" }}
-            formatter={(value, name) => [value, name]}
+            content={<AnomalyTooltip pointExplanations={point_explanations} />}
           />
           <Legend />
           <Scatter
@@ -90,6 +132,25 @@ export default function AnomalyScatterPlot({ anomalyData }) {
           />
         </ScatterChart>
       </ResponsiveContainer>
+
+      {/* Most anomalous features summary */}
+      {anomalyData.most_anomalous_features?.length > 0 && (
+        <div className="mt-4 border-t border-gray-100 pt-4">
+          <p className="text-xs font-medium text-gray-600 mb-2">
+            Features most different in anomalous events:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {anomalyData.most_anomalous_features.map((f, i) => (
+              <div key={i} className="bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 text-xs">
+                <span className="font-medium text-red-700">{f.feature}</span>
+                <span className="text-gray-500 ml-1">
+                  anomaly avg {f.anomaly_mean} vs normal {f.normal_mean}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

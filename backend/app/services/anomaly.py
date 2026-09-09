@@ -17,11 +17,36 @@ def _find_anomaly_features(num_cols, anomaly_indices):
             "normal_mean": round(float(normal_mean), 4),
             "difference": round(float(mean_diff), 4)
         })
-    features.sort(key=lambda x: x["difference"], reverse=True)  # Sort by mean difference  
-    return features[:5]  # Return top 5 features with the largest mean difference
+    features.sort(key=lambda x: x["difference"], reverse=True)
+    return features[:5]
+
+
+def _explain_point(row, col_means, col_stds, top_n=3):
+    """
+    For a single data point (row), return the top_n columns that deviate
+    most from the normal mean in units of standard deviations.
+    This explains WHY the point was flagged as anomalous.
+    """
+    deviations = []
+    for col in row.index:
+        mean = col_means.get(col, 0)
+        std = col_stds.get(col, 1)
+        if std == 0:
+            continue
+        z = abs((row[col] - mean) / std)
+        direction = "high" if row[col] > mean else "low"
+        deviations.append({
+            "feature": col,
+            "value": round(float(row[col]), 4),
+            "normal_mean": round(float(mean), 4),
+            "z_score": round(float(z), 2),
+            "direction": direction,
+        })
+    deviations.sort(key=lambda x: x["z_score"], reverse=True)
+    return deviations[:top_n]
+
 
 def detect_anomalies(df):
-    # Get only numeric columns and drop rows with missing values
     num_cols = df.select_dtypes(include=[np.number]).dropna()
 
     if num_cols.empty:
@@ -34,7 +59,6 @@ def detect_anomalies(df):
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(num_cols)
 
-    # Reduce n_estimators for speed — 50 is sufficient for pattern detection
     model = IsolationForest(n_estimators=50, contamination=0.03, random_state=42)
     model.fit(scaled_data)
 
@@ -42,13 +66,31 @@ def detect_anomalies(df):
     anomaly_scores = model.decision_function(scaled_data)
     anomaly_indices = np.where(predictions == -1)[0]
 
-    dictionary = {
+    # Compute normal means/stds for per-point explanations
+    normal_indices = np.where(predictions == 1)[0]
+    normal_rows = num_cols.iloc[normal_indices]
+    col_means = normal_rows.mean().to_dict()
+    col_stds = normal_rows.std().to_dict()
+
+    # Build per-point explanations for the top 50 most anomalous points
+    # sorted by most negative score (most anomalous first)
+    sorted_anomaly_idx = sorted(
+        anomaly_indices.tolist(),
+        key=lambda i: anomaly_scores[i]
+    )[:50]
+
+    point_explanations = {}
+    for i in sorted_anomaly_idx:
+        row = num_cols.iloc[i]
+        point_explanations[i] = _explain_point(row, col_means, col_stds)
+
+    result = {
         "anomaly_indices": anomaly_indices[:50].tolist(),
         "anomaly_scores": anomaly_scores.tolist(),
         "total_events": len(num_cols),
         "total_anomalies": len(anomaly_indices),
         "anomaly_percentage": round((len(anomaly_indices) / len(num_cols)) * 100, 2),
+        "most_anomalous_features": _find_anomaly_features(num_cols, anomaly_indices),
+        "point_explanations": point_explanations,
     }
-    most_anomalous_features = _find_anomaly_features(num_cols, anomaly_indices)
-    dictionary["most_anomalous_features"] = most_anomalous_features
-    return dictionary
+    return result

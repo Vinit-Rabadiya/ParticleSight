@@ -11,6 +11,28 @@ async def lifespan(app: FastAPI):
     print("Starting up the ParticleSight API...")
     init_db(reset=RESET_DB_ON_STARTUP)
     print("Database initialized successfully.")
+
+    # Mark any analyses that were left stuck in pending/running as failed.
+    # This happens when Render restarts the server mid-analysis — the background
+    # task dies but the DB record stays as "running" forever without this cleanup.
+    try:
+        from app.database import engine
+        from app.models.tables import Analysis
+        from sqlmodel import Session, select
+        with Session(engine) as session:
+            stuck = session.exec(
+                select(Analysis).where(Analysis.status.in_(["pending", "running"]))
+            ).all()
+            for analysis in stuck:
+                analysis.status = "failed"
+                analysis.error_message = "Server restarted while analysis was in progress. Please re-run."
+                session.add(analysis)
+            if stuck:
+                session.commit()
+                print(f"Marked {len(stuck)} stuck analysis/analyses as failed.")
+    except Exception as e:
+        print(f"Could not clean up stuck analyses: {e}")
+
     yield
     print("Shutting down the ParticleSight API...")
 

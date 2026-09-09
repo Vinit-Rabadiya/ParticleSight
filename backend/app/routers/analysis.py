@@ -72,12 +72,6 @@ def trigger_analysis(
     background_tasks: BackgroundTasks = None,
     session: Session = Depends(get_session),
 ):
-    """
-    Triggers a new analysis for a dataset.
-    If a dataset_id is provided, it uses an existing stored dataset.
-    Otherwise, it accepts a CERN link, creates a temporary dataset record,
-    and starts analysis from that URL.
-    """
     if payload is not None:
         dataset_id = payload.dataset_id or dataset_id
         cern_link = payload.cern_link or cern_link
@@ -117,6 +111,20 @@ def trigger_analysis(
         analysis_dataset_id = new_dataset.id
         analysis_url = new_dataset.url
         analysis_name = new_dataset.name
+
+    # Block duplicate — if a pending/running analysis already exists for this
+    # dataset, return it instead of creating another one
+    existing = session.exec(
+        select(Analysis)
+        .where(Analysis.dataset_id == analysis_dataset_id)
+        .where(Analysis.status.in_(["pending", "running"]))
+    ).first()
+    if existing:
+        return {
+            "analysis_id": existing.id,
+            "status": existing.status,
+            "message": "Analysis already in progress for this dataset.",
+        }
 
     new_analysis = Analysis(dataset_id=analysis_dataset_id)
     session.add(new_analysis)
